@@ -4,12 +4,12 @@
         {
             "label": "build",
             "type": "shell",
-            "command": "./build.bat"
+            "command": "${workspaceFolder}/build.bat"
         },
         {
             "label": "run",
             "type": "shell",
-            "command": "./bin/program.exe"
+            "command": "${workspaceFolder}/bin/program.exe"
         }
     ]
 }
