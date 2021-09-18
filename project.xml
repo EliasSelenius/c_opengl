@@ -1,0 +1,14 @@
+<!DOCTYPE xml>
+<project>
+    <output>
+        <name>c_opengl</name>
+        <type>exe</type>
+        <linkargs>-luser32.lib -lgdi32.lib -lshell32.lib -lkernel32.lib -lmsvcrt.lib -llibcmt.lib -lbin/glfw3_mt.lib</linkargs>
+        <!--  
+            -luser32.lib -lgdi32.lib -lshell32.lib -lkernel32.lib -lmsvcrt.lib -llibcmt.lib
+            -lbin/glfw3.lib 
+            -lbin/glfw3dll.lib
+            -lbin/glfw3_mt.lib
+        -->
+    </output>
+</project>

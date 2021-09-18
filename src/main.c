@@ -1,49 +1,16 @@
 
-#include "graphics/GL.h"
-//#include "graphics/shader.h"
+#include <graphics.h>
 
-#include "linked_list.h"
-#include <stdio.h>
+#include "entity.h"
 
-void printList(linked_list* list) {
-    if (list->count == 0) {
-        printf("list has no elements\n");
-    } else {
-        printf("list has %d elements: ", list->count);
-        linked_list_node* n = list->first;
-        while (n) {
-            printf("%d, ", *((int*)n->item));
-            n = n->next;
-        }
-        //printf("%d, ", *((int*)n->item));
-        printf("\n");
-    }
+void sayHello(component* c) {
+    //printf("Msg: %s", c->data);
 }
 
-void testList() {
-
-    linked_list* list = linked_list_ctor();
-    {
-        int a = 12;
-        int b = 44;
-        int c = 235;
-
-        printList(list);
-        linked_list_add(list, &a);
-        printList(list);
-        linked_list_add(list, &b);
-        printList(list);
-        linked_list_add(list, &c);
-        a = 10;
-        printList(list);
-    }
-
-    printList(list);
-
-
-    printf("element at 0: %d", *((int*)linked_list_get(list, 0)));
-
+void rigidbody(component* c) {
+    //printf("entity gets moved");
 }
+
 
 int main() {
 
@@ -64,7 +31,7 @@ int main() {
 
     while (!glfwWindowShouldClose(window)) {
 
-        glClearColor(0, 1, 0, 1);
+        glClearColor(0,1,1, 1);
         glClear(GL_COLOR_BUFFER_BIT);
 
         glfwSwapBuffers(window);
