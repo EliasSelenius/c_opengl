@@ -1,15 +1,5 @@
 
-#include <graphics.h>
-
-#include "entity.h"
-
-void sayHello(component* c) {
-    //printf("Msg: %s", c->data);
-}
-
-void rigidbody(component* c) {
-    //printf("entity gets moved");
-}
+#include <GL.h>
 
 
 int main() {
@@ -31,7 +21,7 @@ int main() {
 
     while (!glfwWindowShouldClose(window)) {
 
-        glClearColor(0,1,1, 1);
+        glClearColor(0,1,0, 1);
         glClear(GL_COLOR_BUFFER_BIT);
 
         glfwSwapBuffers(window);
