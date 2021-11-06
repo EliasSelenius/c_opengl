@@ -1,8 +1,11 @@
 #include "fileIO.h"
+#include "types.h"
 
 #include <stdio.h>
+#include <stdlib.h>
 
-char* fileread(const char* filename) {
+
+char* fileread(const char* filename, u32* strLength) {
     FILE* file = fopen(filename, "r");
 
     if (file == NULL) {
@@ -10,13 +13,14 @@ char* fileread(const char* filename) {
     }
 
     fseek(file, 0, SEEK_END);
-    int length = ftell(file);
+    *strLength = ftell(file);
     rewind(file);
 
-    char* res = malloc(sizeof(char) * length + 1);
-    fread(res, 1, length, file);
-    res[length] = (char)0;
+    printf("file:%s has length: %d\n", filename, *strLength);
 
+    char* res = malloc(sizeof(char) * (*strLength) + 1);
+    fread(res, 1, *strLength, file);
+    res[*strLength] = '\0';
 
     fclose(file);
 

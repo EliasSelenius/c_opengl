@@ -1,41 +1,27 @@
 #include <GL.h>
-#include "shader.h"
+#include "graphics/shader.h"
 #include <stdio.h>
+#include <stdlib.h>
 #include "types.h"
-
 #include "fileIO.h"
-
 #include "String.h"
-
 #include "vec.h"
+#include "graphics/Mesh.h"
+
+#include "graphics/UBO.h"
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
     printf("resize: %d * %d\n", width, height);
     glViewport(0, 0, width, height);
 }
 
-void makeBuffer() {
-    u32 b;
-    glGenBuffers(1, &b);
-    glBindBuffer(GL_ARRAY_BUFFER, b);
-
-    vec2 data[] = {
-        {-1, -1},
-        {0, 1},
-        {1, -1}
-    };
-
-    glBufferData(GL_ARRAY_BUFFER, sizeof(data), data, GL_STATIC_DRAW);
-}
 
 int main() {
-
-    GLFWwindow* window;
 
     if (!glfwInit())
         return -1;
 
-    window = glfwCreateWindow(1600, 900, "Test window", NULL, NULL);
+    GLFWwindow* window = glfwCreateWindow(1600, 900, "Test window", NULL, NULL);
     if (!window) {
         glfwTerminate();
         return -1;
@@ -48,28 +34,50 @@ int main() {
 
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 
-
-    char* vert = fileread("src/vert.glsl");
-    char* frag = fileread("src/frag.glsl");
+    u32 vlen, flen;
+    char* vert = fileread("src/graphics/shaders/vert.glsl", &vlen);
+    char* frag = fileread("src/graphics/shaders/frag.glsl", &flen);
     //printf("%s\n\n\n", vert);
     //printf("%s\n\n\n", frag);
-    u32 shader = shaderCreate(vert, frag);
+    u32 shader = shaderCreate(vert, vlen, frag, flen);
     free(vert);
     free(frag);
     
 
     glUseProgram(shader);
 
+    // Material 8
+
+    Ublock* ub = ublockGetByName("TESTINGS");
+    //ub->bufferId = 12;
+    //printf("%s\n", ub->name);
+
+    //ublockPrintAll();
+
+
+    vertex data[] = {
+        {-1, -1, 0,    1, 0, 0, 1},
+        {0, 1, 0,      0, 1, 0, 1},
+        {1, -1, 0,     0, 0, 1, 1}
+    };
+
+    u32 ind[] = { 0, 2, 1 };
+
+    Mesh mesh;
+    meshCreate(3, data, 3, ind, &mesh);    
+
     while (!glfwWindowShouldClose(window)) {
 
         glClearColor(0,1,0, 1);
         glClear(GL_COLOR_BUFFER_BIT);
 
-        glDrawArrays(GL_TRIANGLES, 0, 3);
+        meshRender(&mesh);
 
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
+
+    meshDelete(&mesh);
 
     glfwDestroyWindow(window);
 

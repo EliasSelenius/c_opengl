@@ -25,8 +25,8 @@ typedef union {
 
 STATIC_ASSERT(sizeof(vec4) == 16, "Expected vec4 to be 16 bytes.");
 
-f32 vec2Length(vec2 v) { return v.x*v.x + v.y*v.y; }
-f32 vec3Length(vec3 v) { return v.x*v.x + v.y*v.y + v.z*v.z; }
-f32 vec4Length(vec4 v) { return v.x*v.x + v.y*v.y + v.z*v.z + v.w*v.w; }
+//f32 vec2Length(vec2 v) { return v.x*v.x + v.y*v.y; }
+//f32 vec3Length(vec3 v) { return v.x*v.x + v.y*v.y + v.z*v.z; }
+//f32 vec4Length(vec4 v) { return v.x*v.x + v.y*v.y + v.z*v.z + v.w*v.w; }
 
 //vec2 vec2(f32 x, f32 y) { return {}}
