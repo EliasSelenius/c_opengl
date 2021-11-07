@@ -3,6 +3,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 
 Ublock ublocks[30];
 static u32 ublockCount = 0;
@@ -11,7 +12,7 @@ static Ublock* createNew(char* name) {
     Ublock* ub = &(ublocks[ublockCount]);
     ub->bindingPoint = ublockCount;
 
-    ub->name = malloc(strlen(name));
+    ub->name = calloc(strlen(name) + 1, sizeof(char));
     strcpy(ub->name, name);
     
     ublockCount++;

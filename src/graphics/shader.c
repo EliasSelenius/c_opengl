@@ -8,7 +8,6 @@
 
 static u32 makeShader(u32 program, GLenum type, const char* code, i32 codeLength) {
     u32 s = glCreateShader(type);
-    printf("shader(%d) - %d chars.\n", type, codeLength);
     glShaderSource(s, 1, &code, &codeLength); 
     glAttachShader(program, s);
     return s;
@@ -27,9 +26,7 @@ static void bindUBOs(u32 program) {
         u32 uboIndex = glGetUniformBlockIndex(program, name);
 
         Ublock* ub = ublockGetByName(name);
-        //glUniformBlockBinding(program, uboIndex, ub->bindingPoint);
-
-        printf("UBO: %d -> %d. %s\n", uboIndex, ub->bindingPoint, ub->name);
+        glUniformBlockBinding(program, uboIndex, ub->bindingPoint);
     }
 }
 

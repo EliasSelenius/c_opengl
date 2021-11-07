@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include <string.h>
 
 char* fileread(const char* filename, u32* strLength) {
     FILE* file = fopen(filename, "r");
@@ -16,11 +17,11 @@ char* fileread(const char* filename, u32* strLength) {
     *strLength = ftell(file);
     rewind(file);
 
-    printf("file:%s has length: %d\n", filename, *strLength);
 
-    char* res = malloc(sizeof(char) * (*strLength) + 1);
+    char* res = calloc(*strLength + 1, sizeof(char));
     fread(res, 1, *strLength, file);
-    res[*strLength] = '\0';
+
+    //printf("file:%s has length: %d, and strlen = %llu\n", filename, *strLength, strlen(res));
 
     fclose(file);
 

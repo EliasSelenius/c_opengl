@@ -48,11 +48,11 @@ int main() {
 
     // Material 8
 
-    Ublock* ub = ublockGetByName("TESTINGS");
+    Ublock* ub = ublockGetByName("Material");
     //ub->bufferId = 12;
     //printf("%s\n", ub->name);
 
-    //ublockPrintAll();
+    ublockPrintAll();
 
 
     vertex data[] = {
