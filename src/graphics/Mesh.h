@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../types.h"
-#include "../vec.h"
+#include "../math/vec.h"
 
 typedef struct {
     u32 vao, vbo, ebo;

@@ -3,7 +3,7 @@
     <output>
         <name>c_opengl</name>
         <type>exe</type>
-        <linkargs>-g -lbin/glfw3dll.lib</linkargs>
+        <linkargs>-g -llibs/glfw3dll.lib</linkargs>
         <compileargs>-g</compileargs>
         <!--  
             -luser32.lib -lgdi32.lib -lshell32.lib -lkernel32.lib -lmsvcrt.lib -llibcmt.lib

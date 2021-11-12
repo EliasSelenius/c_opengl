@@ -1,6 +1,6 @@
 #pragma once
 
-#include "types.h"
+#include "../types.h"
 
 typedef union {
     struct { f32 x, y; };
@@ -24,6 +24,8 @@ typedef union {
 } vec4;
 
 STATIC_ASSERT(sizeof(vec4) == 16, "Expected vec4 to be 16 bytes.");
+
+f32 vec4dot(vec4* a, vec4* b);
 
 //f32 vec2Length(vec2 v) { return v.x*v.x + v.y*v.y; }
 //f32 vec3Length(vec3 v) { return v.x*v.x + v.y*v.y + v.z*v.z; }

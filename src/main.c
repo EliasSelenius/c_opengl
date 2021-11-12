@@ -5,10 +5,25 @@
 #include "types.h"
 #include "fileIO.h"
 #include "String.h"
-#include "vec.h"
+#include "math/vec.h"
+#include "math/matrix.h"
 #include "graphics/Mesh.h"
 
 #include "graphics/UBO.h"
+#include "graphics/glUtils.h"
+
+
+/*
+    TODOs:
+        - projection
+        - view
+        - transform matrix
+        - camera
+    
+
+*/
+
+
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
     printf("resize: %d * %d\n", width, height);
@@ -46,11 +61,14 @@ int main() {
 
     glUseProgram(shader);
 
-    // Material 8
+    mat4 cameraMats[2];
+    mat4SetIdentity(&cameraMats[0]);
+    mat4SetIdentity(&cameraMats[1]);
 
-    Ublock* ub = ublockGetByName("Material");
-    //ub->bufferId = 12;
-    //printf("%s\n", ub->name);
+    u32 camBuffer = bufferCreate(cameraMats, sizeof(mat4) * 2);
+
+    Ublock* camUbo = ublockGetByName("Camera");
+    ublockBindBuffer(camUbo, camBuffer);
 
     ublockPrintAll();
 

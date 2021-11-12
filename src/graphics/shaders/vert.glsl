@@ -17,6 +17,6 @@ out Fragdata {
 } v;
 
 void main() {
-    gl_Position = vec4(a_Pos, 1); 
+    gl_Position = camera.projection * camera.view * vec4(a_Pos, 1); 
     v.color = a_Color;
 }

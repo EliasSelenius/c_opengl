@@ -1,14 +1,6 @@
 #include "Mesh.h"
 #include <GL.h>
-
-u32 bufferCreate(void* data, u32 size) {
-    u32 b;
-    glGenBuffers(1, &b);
-    glBindBuffer(GL_ARRAY_BUFFER, b);
-    glBufferData(GL_ARRAY_BUFFER, size, data, GL_STATIC_DRAW);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-    return b;
-}
+#include "glUtils.h"
 
 void setupAttribs() {
     vertex* vert = NULL;
