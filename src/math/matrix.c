@@ -38,3 +38,26 @@ void mat4SetIdentity(mat4* m) {
     m->row3 = (vec4){ 0, 0, 1, 0 };
     m->row4 = (vec4){ 0, 0, 0, 1 };
 }
+
+void mat4Perspective(f32 fovy, f32 aspect, f32 depthNear, f32 depthFar, mat4* out_result) {
+    f32 maxY = depthNear * tan(0.5f * fovy);
+    f32 minY = -maxY;
+    f32 minX = minY * aspect;
+    f32 maxX = maxY * aspect;
+
+    mat4PerspectiveOffCenter(minX, maxX, minY, maxY, depthNear, depthFar, out_result);
+}
+
+void mat4PerspectiveOffCenter(f32 left, f32 right, f32 bottom, f32 top, f32 depthNear, f32 depthFar, mat4* out_result) {
+    f32 x = 2.0f * depthNear / (right - left);
+    f32 y = 2.0f * depthNear / (top - bottom);
+    f32 a = (right + left) / (right - left);
+    f32 b = (top + bottom) / (top - bottom);
+    f32 c = -(depthFar + depthNear) / (depthFar - depthNear);
+    f32 d = -(2.0f * depthFar * depthNear) / (depthFar - depthNear);
+
+    out_result->row1 = (vec4){ x,  0,  0,  0 };
+    out_result->row2 = (vec4){ 0,  y,  0,  0 };
+    out_result->row3 = (vec4){ a,  b,  c, -1 };
+    out_result->row4 = (vec4){ 0,  0,  d,  0 };
+}
