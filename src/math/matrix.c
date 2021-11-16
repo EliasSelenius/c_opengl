@@ -1,5 +1,8 @@
 #include "matrix.h"
 #include "vec.h"
+#include "quat.h"
+
+#include <math.h>
 
 void mat4Mul(mat4* left, mat4* right, mat4* out_result) {
     vec4 c1 = { right->row1.x, right->row2.x, right->row3.x, right->row4.x };
@@ -30,6 +33,9 @@ void mat4Mul(mat4* left, mat4* right, mat4* out_result) {
     out.row4.w = vec4dot(&left->row4, &c4);
 
     *out_result = out;
+    /*{
+        vec4dot(&left->row1, &c1), vec4dot(&left->row1, &c2), vec4dot(&left->row1, &c3), vec4dot(&left->row1, &c4)
+    }*/
 }
 
 void mat4SetIdentity(mat4* m) {
@@ -60,4 +66,47 @@ void mat4PerspectiveOffCenter(f32 left, f32 right, f32 bottom, f32 top, f32 dept
     out_result->row2 = (vec4){ 0,  y,  0,  0 };
     out_result->row3 = (vec4){ a,  b,  c, -1 };
     out_result->row4 = (vec4){ 0,  0,  d,  0 };
+}
+
+
+
+
+
+// Matrix Stack:
+
+mat4 matrixStack[16];
+static int matrixIndex = -1;
+
+void pushMatrix() {
+    matrixIndex++;
+    mat4* m = &matrixStack[matrixIndex];
+    mat4SetIdentity(m);
+}
+/*
+    Note: this function does not care about the current matrixs rotation, it just translates relatively to its parent
+*/
+void translate(vec3 t) {
+    mat4* m = &matrixStack[matrixIndex];
+    m->row4.x = t.x;
+    m->row4.y = t.y;
+    m->row4.z = t.z;
+}
+
+void scale(vec3 s) {
+
+}
+
+void rotate(quat q) {
+    mat4 rot;
+    quatToMatrix(&q, &rot);
+    mat4* m = &matrixStack[matrixIndex];
+    mat4Mul(m, &rot, m);
+}
+
+void popMatrix(mat4* out_result) {
+    *out_result = matrixStack[matrixIndex--];
+    for (int i = matrixIndex; i >= 0; i--) {
+        mat4* m = &matrixStack[i];
+        mat4Mul(out_result, m, out_result);
+    }
 }

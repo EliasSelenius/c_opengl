@@ -1,7 +1,5 @@
 #include "quat.h"
-#include "matrix.h"
 #include <math.h>
-
 
 void quatMul(quat* left, quat* right, quat* out_result) {
     f32 a = left->w,

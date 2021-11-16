@@ -1,11 +1,7 @@
 #pragma once 
 
 #include "../types.h"
-
-// A quaternion in the form: w + xi + yj + zk
-typedef struct quat {
-    f32 x, y, z, w;
-} quat;
+#include "structs.h"
 
 void quatMul(quat* left, quat* right, quat* out_result);
 
