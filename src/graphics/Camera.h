@@ -2,8 +2,11 @@
 
 #include "../math/matrix.h"
 #include "../types.h"
+#include "../math/Transform.h"
 
 typedef struct Camera {
+    Transform transform;
+
     f32 fieldOfView;
     f32 nearPlane, farPlane;
 

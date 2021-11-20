@@ -45,6 +45,15 @@ void mat4SetIdentity(mat4* m) {
     m->row4 = (vec4){ 0, 0, 0, 1 };
 }
 
+void mat4Transpose(mat4* m, mat4* out_result) {
+    *out_result = (mat4) {
+        m->row1.x, m->row2.x, m->row3.x, m->row4.x,
+        m->row1.y, m->row2.y, m->row3.y, m->row4.y,
+        m->row1.z, m->row2.z, m->row3.z, m->row4.z,
+        m->row1.w, m->row2.w, m->row3.w, m->row4.w
+    };
+}
+
 void mat4Perspective(f32 fovy, f32 aspect, f32 depthNear, f32 depthFar, mat4* out_result) {
     f32 maxY = depthNear * tan(0.5f * fovy);
     f32 minY = -maxY;
@@ -68,6 +77,10 @@ void mat4PerspectiveOffCenter(f32 left, f32 right, f32 bottom, f32 top, f32 dept
     out_result->row4 = (vec4){ 0,  0,  d,  0 };
 }
 
+
+void mat4Lookat(vec3* eye, vec3* target, vec3* up, mat4* out_result) {
+    
+}
 
 
 

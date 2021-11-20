@@ -23,6 +23,10 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
     glViewport(0, 0, width, height);
 }
 
+void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods) {
+    printf("%i, %i, %i, %i\n", key, scancode, action, mods);
+}
+
 static void initUBO(Ublock** ubo, char* name, u32 size) {
     *ubo = ublockGetByName(name);
     u32 buffer = bufferCreate(NULL, size);
@@ -34,6 +38,7 @@ int appInit() {
     if (!glfwInit())
         return -1;
 
+
     app.window = glfwCreateWindow(1600, 900, "Test window", NULL, NULL);
     if (!app.window) {
         glfwTerminate();
@@ -44,11 +49,16 @@ int appInit() {
     gladLoadGL(glfwGetProcAddress);
 
     glfwSetFramebufferSizeCallback(app.window, framebuffer_size_callback);
+    glfwSetKeyCallback(app.window, key_callback);
 
 
     initUBO(&app.cameraUBO, "Camera", sizeof(mat4) * 2);
     initUBO(&app.modelUBO, "Model", sizeof(mat4));
     
+
+    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
+    // TODO look up glMultiDrawElements()
 
     return 1;
 }
@@ -79,9 +89,6 @@ int main() {
 
 
     // Camera
-
-    
-
     Camera cam;
     cameraInit(&cam, 3.14 / 2.0, 0.1, 100.0);
     cameraUse(&cam);
@@ -89,16 +96,23 @@ int main() {
 
     // Mesh
     vertex data[] = {
-        {-1, -1, 0,    1, 0, 0, 1},
-        {0, 1, 0,      0, 1, 0, 1},
-        {1, -1, 0,     0, 0, 1, 1}
+        {-1, -1, 0,   0,0,0,   1, 0, 0, 1},
+        {0, 1, 0,     0,0,0,   0, 1, 0, 1},
+        {1, -1, 0,    0,0,0,   0, 0, 1, 1}
     };
     u32 ind[] = { 0, 2, 1 };
     Mesh mesh;
     meshCreate(3, data, 3, ind, &mesh);
 
+
+    // plane
+    Mesh plane;
+    MeshData planeData;
+    genPlane(&planeData, 5);
+    meshCreate(planeData.vertexCount, planeData.vertices, planeData.indexCount, planeData.indices, &plane);
+
     
-    mat4 model;
+    mat4 model, planeModel;
     mat4SetIdentity(&model);
 
 
@@ -106,19 +120,28 @@ int main() {
 
         drawframe();
 
+        quatFromAxisAngle(&(vec3){0,0,1}, glfwGetTime() * 3.0f, &cam.transform.rotation);
+        //glfwGetCursorPos()
+
         cameraUse(&cam);
 
         pushMatrix();
  
         quat q;
-        quatFromAxisAngle(&(vec3){0, 1, 0}, glfwGetTime() * 3.0f, &q);
-        rotate(q);
-        translate((vec3){0, 0, -10});
+        quatFromAxisAngle(&(vec3){0, 1, 0}, glfwGetTime(), &q);
+        //rotate(q);
+        translate((vec3){0, -2, -6});
  
+        pushMatrix();
+        translate((vec3){ 4, 4, 4});
         popMatrix(&model);
+
+        popMatrix(&planeModel);
 
         bufferInit(app.modelUBO->bufferId, &model, sizeof(mat4));
         meshRender(&mesh);
+        bufferInit(app.modelUBO->bufferId, &planeModel, sizeof(mat4));
+        meshRender(&plane);
 
 
 
