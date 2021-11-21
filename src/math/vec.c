@@ -1,6 +1,12 @@
 #include "vec.h"
 #include <math.h>
 
+void vec2Normalize(vec2* v) {
+    f32 l = sqrt(v->x * v->x + v->y * v->y);
+    v->x /= l;
+    v->y /= l;
+}
+
 
 void vec3Add(vec3* a, vec3 b) {
     a->x += b.x;

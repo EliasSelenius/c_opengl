@@ -26,7 +26,15 @@ void cameraUpdateMatrices(Camera* cam) {
 
     // view
     transformToMatrix(&cam->transform, &cam->view);
-    mat4Transpose(&cam->view, &cam->view);
+    cam->view.row1.x *= -1;
+    cam->view.row1.y *= -1;
+    cam->view.row1.z *= -1;
+
+    cam->view.row3.x *= -1;
+    cam->view.row3.y *= -1;
+    cam->view.row3.z *= -1;
+    // can use transpose instead of inverse, since view is orthogonal
+    //mat4Transpose(&cam->view, &cam->view);
 }
 
 /*

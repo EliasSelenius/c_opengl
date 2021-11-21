@@ -1,4 +1,5 @@
 #include "Transform.h"
+#include "matrix.h"
 
 void transformSetDefaults(Transform* transform) {
     transform->position = (vec3){ 0, 0, 0 };
@@ -6,12 +7,17 @@ void transformSetDefaults(Transform* transform) {
     quatSetIdentity(&transform->rotation);
 }
 
-void transformToMatrix(Transform* transform, mat4* out_result) {   
+void transformToMatrix(Transform* transform, mat4* out_result) {
+
     quatToMatrix(&transform->rotation, out_result);
 
     // TODO: implement scale
     
-    out_result->row4.xyz = transform->position;
+    //out_result->row4.xyz = transform->position;
+
+    out_result->row4.x = transform->position.x;
+    out_result->row4.y = transform->position.y;
+    out_result->row4.z = transform->position.z;
 }
 
 void transformTranslate(Transform* transform, vec3 translation);

@@ -17,6 +17,32 @@
 #include "graphics/Camera.h"
 
 Application app;
+Camera g_Camera;
+f64 mouse_x, mouse_y, pmouse_x, pmouse_y, dmouse_x, dmouse_y;
+vec2 wasd;
+
+// test gameobject
+typedef struct Gameobject {
+    Transform transform;
+    Mesh* mesh;
+} Gameobject;
+
+
+void gameobjectInit(Mesh* mesh, Gameobject* out_result) {
+    out_result->mesh = mesh;
+    transformSetDefaults(&out_result->transform);
+}
+
+void gameobjectRender(Gameobject* gameobject) {
+    mat4 model;
+    transformToMatrix(&gameobject->transform, &model);
+    bufferInit(app.modelUBO->bufferId, &model, sizeof(mat4));
+    meshRender(gameobject->mesh);
+}
+
+Gameobject planeObject;
+
+
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
     printf("resize: %d * %d\n", width, height);
@@ -24,7 +50,8 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
 }
 
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods) {
-    printf("%i, %i, %i, %i\n", key, scancode, action, mods);
+    //printf("%i, %i, %i, %i\n", key, scancode, action, mods);
+
 }
 
 static void initUBO(Ublock** ubo, char* name, u32 size) {
@@ -67,9 +94,44 @@ void appExit() {
     glfwSetWindowShouldClose(app.window, 1);
 }
 
-void drawframe() {
+static void drawframe() {
     glClearColor(0,1,1, 1);
     glClear(GL_COLOR_BUFFER_BIT);
+
+    //quatFromAxisAngle(&(vec3){0,0,1}, glfwGetTime() * 3.0f, &cam.transform.rotation);
+
+    g_Camera.transform.position.x += wasd.x / 10.0f;
+    g_Camera.transform.position.z += wasd.y / 10.0f;
+
+    cameraUse(&g_Camera);
+
+    quat q;
+    quatFromAxisAngle(&(vec3){0, 1, 0}, glfwGetTime(), &q);
+    //planeObject.transform.rotation = q;
+    planeObject.transform.position.x = round(g_Camera.transform.position.x);
+    planeObject.transform.position.z = round(g_Camera.transform.position.z);
+
+    gameobjectRender(&planeObject);
+}
+
+static void updateInput() {
+
+    pmouse_x = mouse_x;
+    pmouse_y = mouse_y;
+    glfwGetCursorPos(app.window, &mouse_x, &mouse_y);
+    dmouse_x = mouse_x - pmouse_x;
+    dmouse_y = mouse_y - pmouse_y;
+    //printf("Mouse: %f, %f  delta: %f, %f\n", mouse_x, mouse_y, dmouse_x, dmouse_y);
+
+
+    wasd = (vec2) { 0, 0 };
+    if (glfwGetKey(app.window, GLFW_KEY_W)) wasd.y += 1;
+    if (glfwGetKey(app.window, GLFW_KEY_S)) wasd.y -= 1;
+    if (glfwGetKey(app.window, GLFW_KEY_A)) wasd.x += 1;
+    if (glfwGetKey(app.window, GLFW_KEY_D)) wasd.x -= 1;
+    if (wasd.x != 0.0f || wasd.y != 0.0f) {
+        vec2Normalize(&wasd);
+    }
 }
 
 int main() {
@@ -89,9 +151,8 @@ int main() {
 
 
     // Camera
-    Camera cam;
-    cameraInit(&cam, 3.14 / 2.0, 0.1, 100.0);
-    cameraUse(&cam);
+    cameraInit(&g_Camera, 3.14 / 2.0, 0.1, 100.0);
+    cameraUse(&g_Camera);
     
 
     // Mesh
@@ -108,7 +169,7 @@ int main() {
     // plane
     Mesh plane;
     MeshData planeData;
-    genPlane(&planeData, 5);
+    genPlane(&planeData, 40);
     meshCreate(planeData.vertexCount, planeData.vertices, planeData.indexCount, planeData.indices, &plane);
 
     
@@ -116,34 +177,13 @@ int main() {
     mat4SetIdentity(&model);
 
 
+    gameobjectInit(&plane, &planeObject);
+    planeObject.transform.position = (vec3) {0, -3, -4};
+
+
     while (!glfwWindowShouldClose(app.window)) {
-
+        updateInput();
         drawframe();
-
-        quatFromAxisAngle(&(vec3){0,0,1}, glfwGetTime() * 3.0f, &cam.transform.rotation);
-        //glfwGetCursorPos()
-
-        cameraUse(&cam);
-
-        pushMatrix();
- 
-        quat q;
-        quatFromAxisAngle(&(vec3){0, 1, 0}, glfwGetTime(), &q);
-        //rotate(q);
-        translate((vec3){0, -2, -6});
- 
-        pushMatrix();
-        translate((vec3){ 4, 4, 4});
-        popMatrix(&model);
-
-        popMatrix(&planeModel);
-
-        bufferInit(app.modelUBO->bufferId, &model, sizeof(mat4));
-        meshRender(&mesh);
-        bufferInit(app.modelUBO->bufferId, &planeModel, sizeof(mat4));
-        meshRender(&plane);
-
-
 
         glfwSwapBuffers(app.window);
         glfwPollEvents();
