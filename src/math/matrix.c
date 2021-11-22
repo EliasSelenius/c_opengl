@@ -12,25 +12,25 @@ void mat4Mul(mat4* left, mat4* right, mat4* out_result) {
 
     mat4 out;
 
-    out.row1.x = vec4dot(&left->row1, &c1);
-    out.row1.y = vec4dot(&left->row1, &c2);
-    out.row1.z = vec4dot(&left->row1, &c3);
-    out.row1.w = vec4dot(&left->row1, &c4);
+    out.row1.x = vec4Dot(&left->row1, &c1);
+    out.row1.y = vec4Dot(&left->row1, &c2);
+    out.row1.z = vec4Dot(&left->row1, &c3);
+    out.row1.w = vec4Dot(&left->row1, &c4);
 
-    out.row2.x = vec4dot(&left->row2, &c1);
-    out.row2.y = vec4dot(&left->row2, &c2);
-    out.row2.z = vec4dot(&left->row2, &c3);
-    out.row2.w = vec4dot(&left->row2, &c4);
+    out.row2.x = vec4Dot(&left->row2, &c1);
+    out.row2.y = vec4Dot(&left->row2, &c2);
+    out.row2.z = vec4Dot(&left->row2, &c3);
+    out.row2.w = vec4Dot(&left->row2, &c4);
 
-    out.row3.x = vec4dot(&left->row3, &c1);
-    out.row3.y = vec4dot(&left->row3, &c2);
-    out.row3.z = vec4dot(&left->row3, &c3);
-    out.row3.w = vec4dot(&left->row3, &c4);
+    out.row3.x = vec4Dot(&left->row3, &c1);
+    out.row3.y = vec4Dot(&left->row3, &c2);
+    out.row3.z = vec4Dot(&left->row3, &c3);
+    out.row3.w = vec4Dot(&left->row3, &c4);
 
-    out.row4.x = vec4dot(&left->row4, &c1);
-    out.row4.y = vec4dot(&left->row4, &c2);
-    out.row4.z = vec4dot(&left->row4, &c3);
-    out.row4.w = vec4dot(&left->row4, &c4);
+    out.row4.x = vec4Dot(&left->row4, &c1);
+    out.row4.y = vec4Dot(&left->row4, &c2);
+    out.row4.z = vec4Dot(&left->row4, &c3);
+    out.row4.w = vec4Dot(&left->row4, &c4);
 
     *out_result = out;
     /*{

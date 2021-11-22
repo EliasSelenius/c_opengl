@@ -33,8 +33,21 @@ void cameraUpdateMatrices(Camera* cam) {
     cam->view.row3.x *= -1;
     cam->view.row3.y *= -1;
     cam->view.row3.z *= -1;
-    // can use transpose instead of inverse, since view is orthogonal
-    //mat4Transpose(&cam->view, &cam->view);
+
+    vec3 xaxis = cam->view.row1.xyz;
+    vec3 yaxis = cam->view.row2.xyz;
+    vec3 zaxis = cam->view.row3.xyz;
+
+    cam->view = (mat4) {
+        // the axises here are on the columns (insted of rows) because the transpose of an orthonormalized matrix is the same as its inverse
+        xaxis.x, yaxis.x, zaxis.x, 0,
+        xaxis.y, yaxis.y, zaxis.y, 0,
+        xaxis.z, yaxis.z, zaxis.z, 0,
+
+        -vec3Dot(&xaxis, &cam->transform.position),
+        -vec3Dot(&yaxis, &cam->transform.position),
+        -vec3Dot(&zaxis, &cam->transform.position), 1
+    };
 }
 
 /*

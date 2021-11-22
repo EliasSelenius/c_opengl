@@ -20,6 +20,18 @@ void transformToMatrix(Transform* transform, mat4* out_result) {
     out_result->row4.z = transform->position.z;
 }
 
-void transformTranslate(Transform* transform, vec3 translation);
-void transformRotate(Transform* transform, quat rotation);
-void transformRotateAxisAngle(Transform* transform, vec3 axis, f32 angle);
+void transformTranslate(Transform* transform, vec3 translation) {
+    transform->position.x += translation.x;
+    transform->position.y += translation.y;
+    transform->position.z += translation.z;
+}
+
+void transformRotate(Transform* transform, quat rotation) {
+    quatMul(&transform->rotation, &rotation, &transform->rotation);
+}
+
+void transformRotateAxisAngle(Transform* transform, vec3 axis, f32 angle) {
+    quat q;
+    quatFromAxisAngle(&axis, angle, &q);
+    transformRotate(transform, q);
+}

@@ -14,6 +14,16 @@ void vec3Add(vec3* a, vec3 b) {
     a->z += b.z;
 }
 
+void vec3Scale(vec3* a, f32 scalar) {
+    a->x *= scalar;
+    a->y *= scalar;
+    a->z *= scalar;
+}
+
+f32 vec3Dot(vec3* a, vec3* b) {
+    return a->x * b->x + a->y * b->y + a->z * b->z;
+}
+
 void vec3Normalize(vec3* v) {
     f32 l = sqrt(v->x * v->x + v->y * v->y + v->z * v->z);
     v->x /= l;
@@ -30,6 +40,6 @@ void vec3Cross(vec3* a, vec3* b, vec3* out_result) {
 }
 
 
-f32 vec4dot(vec4* a, vec4* b) {
+f32 vec4Dot(vec4* a, vec4* b) {
     return a->x * b->x + a->y * b->y + a->z * b->z + a->w * b->w; 
 }
