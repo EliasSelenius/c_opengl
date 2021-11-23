@@ -10,7 +10,10 @@ void setupAttribs() {
     glVertexAttribPointer(0, 3, GL_FLOAT, false, sizeof(vertex), &vert->pos);
 
     glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1, 4, GL_FLOAT, false, sizeof(vertex), &vert->color);
+    glVertexAttribPointer(1, 3, GL_FLOAT, false, sizeof(vertex), &vert->normal);
+
+    glEnableVertexAttribArray(2);
+    glVertexAttribPointer(2, 4, GL_FLOAT, false, sizeof(vertex), &vert->color);
 }
 
 
@@ -57,14 +60,24 @@ void meshGenNormals(MeshData* mesh) {
         mesh->vertices[i].normal = (vec3){ 0, 0, 0 };
     }
 
+    //return;
+
     // add every triangles contribution to every vertex normal
     for (int i = 0; i < mesh->indexCount; i += 3) {
         u32 i0 = mesh->indices[i],
             i1 = mesh->indices[i + 1],
             i2 = mesh->indices[i + 2];
 
+
+        vec3 v0 = mesh->vertices[i0].pos;
+        vec3 v1 = mesh->vertices[i1].pos;
+        vec3 v2 = mesh->vertices[i2].pos;
+        vec3Sub(&v0, v2);
+        vec3Sub(&v1, v2);
+
         vec3 normal;
-        // TODO: calc normal. vector cross prod.
+        vec3Cross(&v0, &v1, &normal);
+
 
         vec3Add(&mesh->vertices[i0].normal, normal);
         vec3Add(&mesh->vertices[i1].normal, normal);
@@ -120,7 +133,7 @@ void genPlane(MeshData* out_result, u32 res) {
     for (int x = 0; x <= res; x++) {
         for (int y = 0; y <= res; y++) {
             out_result->vertices[x * vres + y] = (vertex){
-                .pos = { x - half_res, 0, y - half_res },
+                .pos = { x - half_res, sin(x - y), y - half_res },
                 .color = { 1, 1, 1, 1 }
             };
 
@@ -136,7 +149,9 @@ void genPlane(MeshData* out_result, u32 res) {
 
             vi++;
         }
-    } 
+    }
+
+    meshGenNormals(out_result);
 }
 
 void genSphere(MeshData* out_result);

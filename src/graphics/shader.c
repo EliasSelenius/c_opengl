@@ -1,10 +1,12 @@
 #include "shader.h"
 #include "UBO.h"
+#include "../fileIO.h"
 
 #include <GL.h>
 
 #include <string.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 static u32 makeShader(u32 program, GLenum type, const char* code, i32 codeLength) {
     u32 s = glCreateShader(type);
@@ -30,7 +32,9 @@ static void bindUBOs(u32 program) {
     }
 }
 
-u32 shaderCreate(const char* vert, i32 vertLength, const char* frag, i32 fragLength) {
+u32 shaderCreate(const char* vert, i32 vertLength, 
+                 const char* frag, i32 fragLength,
+                 const char* geom, i32 geomLength) {
     /*
         create program
         create shaders
@@ -48,6 +52,7 @@ u32 shaderCreate(const char* vert, i32 vertLength, const char* frag, i32 fragLen
 
     u32 v = makeShader(program, GL_VERTEX_SHADER, vert, vertLength);
     u32 f = makeShader(program, GL_FRAGMENT_SHADER, frag, fragLength);
+    u32 g = geom == NULL ? 0 : makeShader(program, GL_GEOMETRY_SHADER, geom, geomLength);
 
     glLinkProgram(program);
 
@@ -56,6 +61,11 @@ u32 shaderCreate(const char* vert, i32 vertLength, const char* frag, i32 fragLen
 
     glDetachShader(program, f);
     glDeleteShader(f);
+
+    if (g != 0) {
+        glDetachShader(program, g);
+        glDeleteShader(g);
+    }
 
     i32 status;
     glGetProgramiv(program, GL_LINK_STATUS, &status);
@@ -77,3 +87,36 @@ u32 shaderCreate(const char* vert, i32 vertLength, const char* frag, i32 fragLen
 }
 
 
+u32 shaderLoad(const char* name) {
+    
+    char vertFilename[256];
+    strcpy_s(vertFilename, 256, "src/graphics/shaders/");
+    strcat_s(vertFilename, 256, name);
+
+    char fragFilename[256];
+    strcpy_s(fragFilename, 256, vertFilename);
+
+    char geomFilename[256];
+    strcpy_s(geomFilename, 256, vertFilename);
+
+    strcat_s(vertFilename, 256, ".vert");
+    strcat_s(fragFilename, 256, ".frag");
+    strcat_s(geomFilename, 256, ".geom");
+    
+
+    //printf("%s, %s\n", vertFilename, fragFilename);
+
+    u32 vlen, flen, glen;
+    char* vert = fileread(vertFilename, &vlen);
+    char* frag = fileread(fragFilename, &flen);
+    char* geom = fileExists(geomFilename) ? fileread(geomFilename, &glen) : NULL;
+
+
+    u32 shader = shaderCreate(vert, vlen, frag, flen, geom, glen);
+    
+    free(vert);
+    free(frag);
+    if (geom) free(geom);
+
+    return shader;
+}

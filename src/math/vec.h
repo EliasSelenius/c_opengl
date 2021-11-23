@@ -6,6 +6,7 @@
 void vec2Normalize(vec2* v);
 
 void vec3Add(vec3* a, vec3 b);
+void vec3Sub(vec3* a, vec3 b);
 void vec3Scale(vec3* a, f32 scalar);
 f32 vec3Dot(vec3* a, vec3* b);
 void vec3Normalize(vec3* v);

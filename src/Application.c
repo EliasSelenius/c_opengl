@@ -5,6 +5,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
 
 #include "math/matrix.h"
 #include "math/vec.h"
@@ -16,29 +17,20 @@
 #include "graphics/glUtils.h"
 #include "graphics/Camera.h"
 
+#include "Gameobject.h"
+
+
+/*
+    - water shader
+    - model loading
+    - mesh groups
+*/
+
 Application app;
 Camera g_Camera;
 f64 mouse_x, mouse_y, pmouse_x, pmouse_y, dmouse_x, dmouse_y;
 vec2 wasd;
 
-// test gameobject
-typedef struct Gameobject {
-    Transform transform;
-    Mesh* mesh;
-} Gameobject;
-
-
-void gameobjectInit(Mesh* mesh, Gameobject* out_result) {
-    out_result->mesh = mesh;
-    transformSetDefaults(&out_result->transform);
-}
-
-void gameobjectRender(Gameobject* gameobject) {
-    mat4 model;
-    transformToMatrix(&gameobject->transform, &model);
-    bufferInit(app.modelUBO->bufferId, &model, sizeof(mat4));
-    meshRender(gameobject->mesh);
-}
 
 Gameobject planeObject, triangleObject;
 
@@ -83,7 +75,9 @@ int appInit() {
     initUBO(&app.modelUBO, "Model", sizeof(mat4));
     
 
-    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    glEnable(GL_DEPTH_TEST);
+    
 
     // TODO look up glMultiDrawElements()
 
@@ -123,23 +117,21 @@ static void cameraFlyControll() {
 
 static void drawframe() {
     glClearColor(0,1,1, 1);
-    glClear(GL_COLOR_BUFFER_BIT);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     //quatFromAxisAngle(&(vec3){0,0,1}, glfwGetTime() * 3.0f, &cam.transform.rotation);
 
     cameraFlyControll();
-
     cameraUse(&g_Camera);
 
-    quat q;
-    quatFromAxisAngle(&(vec3){0, 1, 0}, glfwGetTime(), &q);
-    //planeObject.transform.rotation = q;
-    planeObject.transform.position.x = round(g_Camera.transform.position.x);
-    planeObject.transform.position.z = round(g_Camera.transform.position.z);
-
+    //glUseProgram(app.waterShader);
+    // water
+    //planeObject.transform.position.x = round(g_Camera.transform.position.x);
+    //planeObject.transform.position.z = round(g_Camera.transform.position.z);
     gameobjectRender(&planeObject);
     
-    
+    glUseProgram(app.defShader);
+    // triangle
     transformRotateAxisAngle(&triangleObject.transform, (vec3){0,1,0}, 0.1f);
     gameobjectRender(&triangleObject);
 
@@ -167,20 +159,15 @@ static void updateInput() {
     }
 }
 
+
 int main() {
     if (!appInit()) return -1;
 
-    // Shader:
-    u32 vlen, flen;
-    char* vert = fileread("src/graphics/shaders/vert.glsl", &vlen);
-    char* frag = fileread("src/graphics/shaders/frag.glsl", &flen);
-    //printf("%s\n\n\n", vert);
-    //printf("%s\n\n\n", frag);
-    u32 shader = shaderCreate(vert, vlen, frag, flen);
-    free(vert);
-    free(frag);
-    
-    glUseProgram(shader);
+    // load shaders:
+    app.defShader = shaderLoad("def");
+    app.waterShader = shaderLoad("water");
+
+    glUseProgram(app.defShader);
 
 
     // Camera
@@ -202,7 +189,7 @@ int main() {
     // plane
     Mesh plane;
     MeshData planeData;
-    genPlane(&planeData, 40);
+    genPlane(&planeData, 50);
     meshCreate(planeData.vertexCount, planeData.vertices, planeData.indexCount, planeData.indices, &plane);
 
     

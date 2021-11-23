@@ -14,6 +14,12 @@ void vec3Add(vec3* a, vec3 b) {
     a->z += b.z;
 }
 
+void vec3Sub(vec3* a, vec3 b) {
+    a->x -= b.x;
+    a->y -= b.y;
+    a->z -= b.z;
+}
+
 void vec3Scale(vec3* a, f32 scalar) {
     a->x *= scalar;
     a->y *= scalar;
