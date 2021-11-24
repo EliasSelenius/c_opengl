@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+
 static u32 makeShader(u32 program, GLenum type, const char* code, i32 codeLength) {
     u32 s = glCreateShader(type);
     glShaderSource(s, 1, &code, &codeLength); 
@@ -86,6 +87,9 @@ u32 shaderCreate(const char* vert, i32 vertLength,
     return program;
 }
 
+static void resolveShaderIncludes(char* code) {
+
+}
 
 u32 shaderLoad(const char* name) {
     

@@ -133,7 +133,7 @@ void genPlane(MeshData* out_result, u32 res) {
     for (int x = 0; x <= res; x++) {
         for (int y = 0; y <= res; y++) {
             out_result->vertices[x * vres + y] = (vertex){
-                .pos = { x - half_res, sin(x - y), y - half_res },
+                .pos = { x - half_res, 0, y - half_res },
                 .color = { 1, 1, 1, 1 }
             };
 
@@ -143,8 +143,8 @@ void genPlane(MeshData* out_result, u32 res) {
                 out_result->indices[i++] = vi + vres + 1;
 
                 out_result->indices[i++] = vi;
-                out_result->indices[i++] = vi + vres;
                 out_result->indices[i++] = vi + vres + 1;
+                out_result->indices[i++] = vi + vres;
             }
 
             vi++;

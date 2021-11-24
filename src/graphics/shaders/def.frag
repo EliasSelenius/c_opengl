@@ -21,6 +21,7 @@ void main() {
 
     vec3 normal = normalize(frag.normal);
     
+    //FragColor = vec4(1, 1, 0, 1);
     //FragColor = vec4(normal, 1.0);
     //FragColor = vec4(lightDir, 1.0);
     FragColor = frag.color * max(dot(normal, lightDir), 0.0);

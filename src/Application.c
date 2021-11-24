@@ -52,6 +52,7 @@ static void initUBO(Ublock** ubo, char* name, u32 size) {
     ublockBindBuffer(*ubo, buffer);
 }
 
+
 int appInit() {
 
     if (!glfwInit())
@@ -77,7 +78,7 @@ int appInit() {
 
     //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     glEnable(GL_DEPTH_TEST);
-    
+    glEnable(GL_CULL_FACE);
 
     // TODO look up glMultiDrawElements()
 
@@ -124,10 +125,10 @@ static void drawframe() {
     cameraFlyControll();
     cameraUse(&g_Camera);
 
-    //glUseProgram(app.waterShader);
+    glUseProgram(app.waterShader);
     // water
-    //planeObject.transform.position.x = round(g_Camera.transform.position.x);
-    //planeObject.transform.position.z = round(g_Camera.transform.position.z);
+    planeObject.transform.position.x = round(g_Camera.transform.position.x);
+    planeObject.transform.position.z = round(g_Camera.transform.position.z);
     gameobjectRender(&planeObject);
     
     glUseProgram(app.defShader);

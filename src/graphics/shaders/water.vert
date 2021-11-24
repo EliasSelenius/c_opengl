@@ -10,7 +10,8 @@ layout (std140) uniform Camera {
 } camera;
 
 layout (location = 0) in vec3 a_Pos;
-layout (location = 1) in vec4 a_Color;
+layout (location = 1) in vec3 a_Normal;
+layout (location = 2) in vec4 a_Color;
 
 out Fragdata {
     vec4 color;
