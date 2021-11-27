@@ -14,7 +14,7 @@ in Fragdata {
 } frag;
 
 void main() {
-    if (length(frag.fragpos) > 25) discard; 
+    //if (length(frag.fragpos) > 25) discard; 
 
     vec3 ld = normalize(vec3(1, 1, 1));
     vec3 lightDir = (camera.view * vec4(ld, 0.0)).xyz;
