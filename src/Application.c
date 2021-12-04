@@ -2,6 +2,8 @@
 #include "Application.h"
 #include "types.h"
 #include "fileIO.h"
+#include "String.h"
+#include "List.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -18,6 +20,8 @@
 #include "graphics/Camera.h"
 
 #include "Gameobject.h"
+
+#include "graphics/obj.h"
 
 
 /*
@@ -74,13 +78,14 @@ int appInit() {
 
     initUBO(&app.cameraUBO, "Camera", sizeof(mat4) * 2);
     initUBO(&app.modelUBO, "Model", sizeof(mat4));
-    
+
 
     //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_CULL_FACE);
 
     // TODO look up glMultiDrawElements()
+
 
     return 1;
 }
@@ -162,7 +167,26 @@ static void updateInput() {
 
 
 int main() {
+
+    //shaderReadFromFile("src/graphics/shaders/def.frag");
+
+
+    /*{ // dynamic array test
+        vec3* list = listCreate(vec3);
+        listAdd(list, (&(vec3) { 1, 0, 0}));
+        listAdd(list, (&(vec3) { 0, 1, 0}));
+        listAdd(list, (&(vec3) { 0, 0, 1}));
+        listAdd(list, (&(vec3) { 1, 1, 1}));
+
+        for (int i = 0; i < listLength(list); i++) {
+            printf("[%i] = %f, %f, %f\n", i, list[i].x, list[i].y, list[i].z);
+        }
+    }*/
+
     if (!appInit()) return -1;
+
+    MeshData objData;
+    objLoad("src/models/pyramid.obj", &objData);
 
     // load shaders:
     app.defShader = shaderLoad("def");

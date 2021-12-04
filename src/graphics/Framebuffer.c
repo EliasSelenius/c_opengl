@@ -1,7 +1,7 @@
 #include "Framebuffer.h"
 
 Framebuffer* framebufferCreate(u32 w, u32 h) {
-    Framebuffer* res = calloc(sizeof(Framebuffer));
+    Framebuffer* res = malloc(sizeof(Framebuffer));
     res->width = w;
     res->height = h;
 

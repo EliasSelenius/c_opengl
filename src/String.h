@@ -8,3 +8,5 @@ typedef struct {
 } String;
 
 String* stringCreate(const char* text);
+
+char* stringStartsWith(char* text, const char* start);
