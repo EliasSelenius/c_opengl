@@ -36,7 +36,7 @@ f64 mouse_x, mouse_y, pmouse_x, pmouse_y, dmouse_x, dmouse_y;
 vec2 wasd;
 
 
-Gameobject planeObject, triangleObject;
+Gameobject planeObject, triangleObject, pyramidObject;
 
 
 
@@ -141,6 +141,8 @@ static void drawframe() {
     transformRotateAxisAngle(&triangleObject.transform, (vec3){0,1,0}, 0.1f);
     gameobjectRender(&triangleObject);
 
+    transformRotateAxisAngle(&pyramidObject.transform, (vec3){0,1,0}, 0.1f);
+    gameobjectRender(&pyramidObject);
 
 }
 
@@ -185,8 +187,19 @@ int main() {
 
     if (!appInit()) return -1;
 
-    MeshData objData;
-    objLoad("src/models/pyramid.obj", &objData);
+    { // pyramid
+        MeshData objData;
+        objLoad("src/models/pyramid.obj", &objData);
+
+        Mesh m;
+        meshCreate(objData.vertexCount, objData.vertices, objData.indexCount, objData.indices, &m);
+
+        gameobjectInit(&m, &pyramidObject);
+
+        pyramidObject.transform.position.y = 10;
+    }
+
+
 
     // load shaders:
     app.defShader = shaderLoad("def");

@@ -95,9 +95,20 @@ void objLoad(const char* filename, MeshData* out_data) {
     u32 len = out_data->vertexCount = out_data->indexCount = listLength(faces) * 3;
     out_data->vertices = malloc(sizeof(vertex) * len);
     out_data->indices = malloc(sizeof(u32) * len);
-    for (int i = 0; i < len; i++) {
-        out_data->indices[i] = i;
-        out_data->vertices[i].pos = faces[i / 3].vertices[]
+    u32 vIndex = 0;
+    for (int i = 0; i < listLength(faces); i++) {
+        for (int k = 0; k < 3; k++) {
+            // indecies:
+            out_data->indices[vIndex] = vIndex;
+
+            // vertex:
+            u32 pI = faces[i].vertices[k].pos_index;
+            out_data->vertices[vIndex].pos = positions[pI];
+            out_data->vertices[vIndex].normal = normals[faces[i].vertices[k].normal_index];
+            out_data->vertices[vIndex].color = (vec4) { 1, 1, 1, 1 };
+
+            vIndex++;
+        }
     }
 
 
