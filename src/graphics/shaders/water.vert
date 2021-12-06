@@ -1,5 +1,9 @@
 #version 330 core
 
+layout (std140) uniform Application {
+    float time;
+} app;
+
 layout (std140) uniform Model {
     mat4 model;
 };
@@ -20,7 +24,7 @@ out Fragdata {
 } v;
 
 float waveHeight(vec2 pos) {
-    return sin(pos.x - pos.y) * 0.5;
+    return sin((pos.x - pos.y) / 3.0 + (app.time)) * 0.5;
 }
 
 void main() {

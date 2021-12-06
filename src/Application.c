@@ -36,7 +36,7 @@ f64 mouse_x, mouse_y, pmouse_x, pmouse_y, dmouse_x, dmouse_y;
 vec2 wasd;
 
 
-Gameobject planeObject, triangleObject, pyramidObject;
+Gameobject planeObject, triangleObject, pyramidObject, boatObject;
 
 
 
@@ -78,7 +78,7 @@ int appInit() {
 
     initUBO(&app.cameraUBO, "Camera", sizeof(mat4) * 2);
     initUBO(&app.modelUBO, "Model", sizeof(mat4));
-
+    initUBO(&app.appUBO, "Application", sizeof(f32));
 
     //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     glEnable(GL_DEPTH_TEST);
@@ -141,8 +141,10 @@ static void drawframe() {
     transformRotateAxisAngle(&triangleObject.transform, (vec3){0,1,0}, 0.1f);
     gameobjectRender(&triangleObject);
 
-    transformRotateAxisAngle(&pyramidObject.transform, (vec3){0,1,0}, 0.1f);
+    transformRotateAxisAngle(&pyramidObject.transform, (vec3){0,1,0}, 0.02f);
     gameobjectRender(&pyramidObject);
+
+    gameobjectRender(&boatObject);
 
 }
 
@@ -199,6 +201,18 @@ int main() {
         pyramidObject.transform.position.y = 10;
     }
 
+    { // boat
+        MeshData objData;
+        objLoad("src/models/Boate.obj", &objData);
+
+        Mesh m;
+        meshCreate(objData.vertexCount, objData.vertices, objData.indexCount, objData.indices, &m);
+
+        gameobjectInit(&m, &boatObject);
+
+        boatObject.transform.position = (vec3) { 20, -5, 0 };
+    }
+
 
 
     // load shaders:
@@ -242,6 +256,10 @@ int main() {
 
 
     while (!glfwWindowShouldClose(app.window)) {
+
+        f32 time = glfwGetTime();
+        bufferInit(app.appUBO->bufferId, &time, sizeof(time));
+
         updateInput();
         drawframe();
 

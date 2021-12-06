@@ -8,6 +8,7 @@ typedef struct Application {
 
     u32 defShader, waterShader;
 
+    Ublock* appUBO;
     Ublock* cameraUBO;
     Ublock* modelUBO;
 } Application;
