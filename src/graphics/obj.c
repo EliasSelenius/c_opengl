@@ -91,23 +91,61 @@ void objLoad(const char* filename, MeshData* out_data) {
     }*/
 
     // TODO: make smooth shading by combining vertices into one, based on angle between normals 
-    // basic flat shading algo:
-    u32 len = out_data->vertexCount = out_data->indexCount = listLength(faces) * 3;
-    out_data->vertices = malloc(sizeof(vertex) * len);
-    out_data->indices = malloc(sizeof(u32) * len);
-    u32 vIndex = 0;
-    for (int i = 0; i < listLength(faces); i++) {
-        for (int k = 0; k < 3; k++) {
-            // indecies:
-            out_data->indices[vIndex] = vIndex;
+    
+    if (false) { // basic flat shading algo:
+        u32 len = out_data->vertexCount = out_data->indexCount = listLength(faces) * 3;
+        out_data->vertices = malloc(sizeof(vertex) * len);
+        out_data->indices = malloc(sizeof(u32) * len);
+        u32 vIndex = 0;
+        for (int i = 0; i < listLength(faces); i++) {
+            for (int k = 0; k < 3; k++) {
+                // indecies:
+                out_data->indices[vIndex] = vIndex;
 
-            // vertex:
-            u32 pI = faces[i].vertices[k].pos_index;
-            out_data->vertices[vIndex].pos = positions[pI];
-            out_data->vertices[vIndex].normal = normals[faces[i].vertices[k].normal_index];
-            out_data->vertices[vIndex].color = (vec4) { 1, 1, 1, 1 };
+                // vertex:
+                u32 pI = faces[i].vertices[k].pos_index;
+                out_data->vertices[vIndex].pos = positions[pI];
+                out_data->vertices[vIndex].normal = normals[faces[i].vertices[k].normal_index];
+                out_data->vertices[vIndex].color = (vec4) { 1, 1, 1, 1 };
 
-            vIndex++;
+                vIndex++;
+            }
+        }
+    }
+     
+    { // smooth shading algo:    
+        out_data->vertexCount = listLength(positions);
+        out_data->vertices = malloc(sizeof(vertex) * out_data->vertexCount);
+        out_data->indexCount = listLength(faces) * 3;
+        out_data->indices = malloc(sizeof(u32) * out_data->indexCount);
+
+        for (int i = 0; i < out_data->vertexCount; i++) {
+            out_data->vertices[i] = (vertex) {
+                .pos = positions[i],
+                .normal = (vec3) {0,0,0},
+                .color = (vec4) {1,1,1,1}
+            };
+        }
+
+        u32 index = 0;
+        for (int i = 0; i < listLength(faces); i++) {
+            // every vertex of one face has the same normal index, so its okay to do vertices[0]
+            u32 normalIndex = faces[i].vertices[0].normal_index;
+
+            // this is not the vertex normal, but it is the face normal
+            vec3 normal = normals[normalIndex];
+
+            for (int k = 0; k < 3; k++) {
+                u32 vIndex = faces[i].vertices[k].pos_index;
+                vec3* np = &out_data->vertices[vIndex].normal;
+                vec3Add(np, normal);
+                
+                out_data->indices[index++] = vIndex;
+            }
+        }
+
+        for (int i = 0; i < out_data->vertexCount; i++) {
+            vec3Normalize(&out_data->vertices[i].normal);
         }
     }
 
