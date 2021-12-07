@@ -28,6 +28,9 @@ void transformTranslate(Transform* transform, vec3 translation) {
 
 void transformRotate(Transform* transform, quat rotation) {
     quatMul(&transform->rotation, &rotation, &transform->rotation);
+
+    quatNormalize(&transform->rotation); // solves the problem of the camera rotation getting totaly fucked up. 
+    // Other things can probably also happen so its a good thing to have to make sure rotations always stays normalized
 }
 
 void transformRotateAxisAngle(Transform* transform, vec3 axis, f32 angle) {

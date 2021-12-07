@@ -97,8 +97,17 @@ void appExit() {
 static void cameraFlyControll() {
     mat4 cam_model;
     transformToMatrix(&g_Camera.transform, &cam_model);
-    vec3 forward = cam_model.row3.xyz;
-    vec3 left = cam_model.row1.xyz;
+
+
+    if (glfwGetMouseButton(app.window, GLFW_MOUSE_BUTTON_RIGHT)) {
+        f32 l = vec3Length(cam_model.row1.xyz);
+        printf("len: %f\n", l);
+
+        transformRotateAxisAngle(&g_Camera.transform, cam_model.row1.xyz, -dmouse_y / 100.0);
+        transformRotateAxisAngle(&g_Camera.transform, (vec3) { 0, 1, 0 }, dmouse_x / 100.0);
+    }
+
+
 
     f32 scale = 1.0f;
     if (glfwGetKey(app.window, GLFW_KEY_LEFT_SHIFT)) {
@@ -112,20 +121,12 @@ static void cameraFlyControll() {
     vec3Add(&g_Camera.transform.position, cam_model.row1.xyz);
 
 
-    if (glfwGetMouseButton(app.window, GLFW_MOUSE_BUTTON_RIGHT)) {
-        transformRotateAxisAngle(&g_Camera.transform, left, -dmouse_y / 100.0);
-        transformRotateAxisAngle(&g_Camera.transform, (vec3) { 0, 1, 0 }, dmouse_x / 100.0);
-
-    }
-
-
 }
 
 static void drawframe() {
     glClearColor(0,1,1, 1);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    //quatFromAxisAngle(&(vec3){0,0,1}, glfwGetTime() * 3.0f, &cam.transform.rotation);
 
     cameraFlyControll();
     cameraUse(&g_Camera);
