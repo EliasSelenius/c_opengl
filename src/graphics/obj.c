@@ -6,15 +6,79 @@
 #include "../String.h"
 #include "../List.h"
 
-typedef struct {
-    u32 pos_index, normal_index, uv_index;
-} vertex_index;
 
-typedef struct {
-    vertex_index vertices[3];
-} face;
+void objFree(OBJ* obj) {
+    listDelete(obj->positions);
+    listDelete(obj->normals);
+    listDelete(obj->faces);
+}
 
-void objLoad(const char* filename, MeshData* out_data) {
+
+    // TODO: make adaptive algo by doing smooth shading or flat shading based on angle between normals 
+
+
+// basic flat shading algo:
+void objToFlatShadedMesh(OBJ* obj, MeshData* out_data) {
+    u32 len = out_data->vertexCount = out_data->indexCount = listLength(obj->faces) * 3;
+    out_data->vertices = malloc(sizeof(vertex) * len);
+    out_data->indices = malloc(sizeof(u32) * len);
+    u32 vIndex = 0;
+    for (int i = 0; i < listLength(obj->faces); i++) {
+        for (int k = 0; k < 3; k++) {
+            // indecies:
+            out_data->indices[vIndex] = vIndex;
+
+            // vertex:
+            u32 pI = obj->faces[i].vertices[k].pos_index;
+            out_data->vertices[vIndex].pos = obj->positions[pI];
+            out_data->vertices[vIndex].normal = obj->normals[obj->faces[i].vertices[k].normal_index];
+            out_data->vertices[vIndex].color = (vec4) { 1, 1, 1, 1 };
+
+            vIndex++;
+        }
+    }
+}
+
+// smooth shading algo:    
+void objToSmoothShadedMesh(OBJ* obj, MeshData* out_data) {
+    out_data->vertexCount = listLength(obj->positions);
+    out_data->vertices = malloc(sizeof(vertex) * out_data->vertexCount);
+    out_data->indexCount = listLength(obj->faces) * 3;
+    out_data->indices = malloc(sizeof(u32) * out_data->indexCount);
+
+    for (int i = 0; i < out_data->vertexCount; i++) {
+        out_data->vertices[i] = (vertex) {
+            .pos = obj->positions[i],
+            .normal = (vec3) {0,0,0},
+            .color = (vec4) {1,1,1,1}
+        };
+    }
+
+    u32 index = 0;
+    for (int i = 0; i < listLength(obj->faces); i++) {
+        // every vertex of one face has the same normal index, so its okay to do vertices[0]
+        u32 normalIndex = obj->faces[i].vertices[0].normal_index;
+
+        // this is not the vertex normal, but it is the face normal
+        vec3 normal = obj->normals[normalIndex];
+
+        for (int k = 0; k < 3; k++) {
+            u32 vIndex = obj->faces[i].vertices[k].pos_index;
+            
+            vec3* np = &out_data->vertices[vIndex].normal;
+            vec3Add(np, normal); // add face normal to vertex normal
+            
+            out_data->indices[index++] = vIndex;
+        }
+    }
+
+    for (int i = 0; i < out_data->vertexCount; i++) {
+        vec3Normalize(&out_data->vertices[i].normal);
+    }
+}
+
+
+void objLoad(const char* filename, OBJ* out_obj) {
     FILE* file = fopen(filename, "r");
 
     if (file == NULL) {
@@ -22,9 +86,9 @@ void objLoad(const char* filename, MeshData* out_data) {
         perror("objLoad() error");
     }
 
-    vec3* positions = listCreate(vec3);
-    vec3* normals = listCreate(vec3);
-    face* faces = listCreate(face);
+    out_obj->positions = listCreate(vec3);
+    out_obj->normals = listCreate(vec3);
+    out_obj->faces = listCreate(face);
 
     char line[256];
     while (fgets(line, sizeof(line), file)) {
@@ -38,7 +102,7 @@ void objLoad(const char* filename, MeshData* out_data) {
             v.y = strtof(cursor, &cursor);
             v.z = strtof(cursor, &cursor);
             
-            listAdd(positions, v);
+            listAdd(out_obj->positions, v);
 
         } else if ((cursor = stringStartsWith(line, "vt "))) {
 
@@ -49,7 +113,7 @@ void objLoad(const char* filename, MeshData* out_data) {
             v.y = strtof(cursor, &cursor);
             v.z = strtof(cursor, &cursor);
             
-            listAdd(normals, v);
+            listAdd(out_obj->normals, v);
 
         } else if ((cursor = stringStartsWith(line, "f "))) {
             face tri;
@@ -65,7 +129,7 @@ void objLoad(const char* filename, MeshData* out_data) {
                 tri.vertices[i].normal_index = strtol(cursor, &cursor, 10) - 1;
             }
 
-            listAdd(faces, tri);
+            listAdd(out_obj->faces, tri);
         }
 
 
@@ -90,67 +154,4 @@ void objLoad(const char* filename, MeshData* out_data) {
         printf("\n");
     }*/
 
-    // TODO: make smooth shading by combining vertices into one, based on angle between normals 
-    
-    if (false) { // basic flat shading algo:
-        u32 len = out_data->vertexCount = out_data->indexCount = listLength(faces) * 3;
-        out_data->vertices = malloc(sizeof(vertex) * len);
-        out_data->indices = malloc(sizeof(u32) * len);
-        u32 vIndex = 0;
-        for (int i = 0; i < listLength(faces); i++) {
-            for (int k = 0; k < 3; k++) {
-                // indecies:
-                out_data->indices[vIndex] = vIndex;
-
-                // vertex:
-                u32 pI = faces[i].vertices[k].pos_index;
-                out_data->vertices[vIndex].pos = positions[pI];
-                out_data->vertices[vIndex].normal = normals[faces[i].vertices[k].normal_index];
-                out_data->vertices[vIndex].color = (vec4) { 1, 1, 1, 1 };
-
-                vIndex++;
-            }
-        }
-    }
-     
-    { // smooth shading algo:    
-        out_data->vertexCount = listLength(positions);
-        out_data->vertices = malloc(sizeof(vertex) * out_data->vertexCount);
-        out_data->indexCount = listLength(faces) * 3;
-        out_data->indices = malloc(sizeof(u32) * out_data->indexCount);
-
-        for (int i = 0; i < out_data->vertexCount; i++) {
-            out_data->vertices[i] = (vertex) {
-                .pos = positions[i],
-                .normal = (vec3) {0,0,0},
-                .color = (vec4) {1,1,1,1}
-            };
-        }
-
-        u32 index = 0;
-        for (int i = 0; i < listLength(faces); i++) {
-            // every vertex of one face has the same normal index, so its okay to do vertices[0]
-            u32 normalIndex = faces[i].vertices[0].normal_index;
-
-            // this is not the vertex normal, but it is the face normal
-            vec3 normal = normals[normalIndex];
-
-            for (int k = 0; k < 3; k++) {
-                u32 vIndex = faces[i].vertices[k].pos_index;
-                vec3* np = &out_data->vertices[vIndex].normal;
-                vec3Add(np, normal);
-                
-                out_data->indices[index++] = vIndex;
-            }
-        }
-
-        for (int i = 0; i < out_data->vertexCount; i++) {
-            vec3Normalize(&out_data->vertices[i].normal);
-        }
-    }
-
-
-    listDelete(positions);
-    listDelete(normals);
-    listDelete(faces);
 }

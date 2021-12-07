@@ -36,7 +36,7 @@ f64 mouse_x, mouse_y, pmouse_x, pmouse_y, dmouse_x, dmouse_y;
 vec2 wasd;
 
 
-Gameobject planeObject, triangleObject, pyramidObject, boatObject;
+Gameobject planeObject, triangleObject, pyramidObject, boatObject, smoothBoateObject;
 
 
 
@@ -146,6 +146,7 @@ static void drawframe() {
     gameobjectRender(&pyramidObject);
 
     gameobjectRender(&boatObject);
+    gameobjectRender(&smoothBoateObject);
 
 }
 
@@ -191,8 +192,13 @@ int main() {
     if (!appInit()) return -1;
 
     { // pyramid
+        OBJ obj;
+        objLoad("src/models/pyramid.obj", &obj);
+
         MeshData objData;
-        objLoad("src/models/pyramid.obj", &objData);
+        objToFlatShadedMesh(&obj, &objData);
+
+        objFree(&obj);
 
         Mesh m;
         meshCreate(objData.vertexCount, objData.vertices, objData.indexCount, objData.indices, &m);
@@ -203,15 +209,27 @@ int main() {
     }
 
     { // boat
-        MeshData objData;
-        objLoad("src/models/Boate.obj", &objData);
+        OBJ objFile;
+        objLoad("src/models/Boate.obj", &objFile);
+
+        MeshData objData[2];
+        objToFlatShadedMesh(&objFile, &objData[0]);
+        objToSmoothShadedMesh(&objFile, &objData[1]);
+
+        objFree(&objFile);
 
         Mesh m;
-        meshCreate(objData.vertexCount, objData.vertices, objData.indexCount, objData.indices, &m);
+        meshCreate(objData[0].vertexCount, objData[0].vertices, objData[0].indexCount, objData[0].indices, &m);
+        Mesh sm;
+        meshCreate(objData[1].vertexCount, objData[1].vertices, objData[1].indexCount, objData[1].indices, &sm);
+        
+
 
         gameobjectInit(&m, &boatObject);
+        gameobjectInit(&sm, &smoothBoateObject);
 
         boatObject.transform.position = (vec3) { 20, -5, 0 };
+        smoothBoateObject.transform.position = (vec3) { 30, -5, 0 };
     }
 
 
