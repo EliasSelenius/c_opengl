@@ -1,6 +1,7 @@
 #include "shader.h"
 #include "UBO.h"
 #include "../fileIO.h"
+#include "../String.h"
 
 #include <GL.h>
 
@@ -87,8 +88,21 @@ u32 shaderCreate(const char* vert, i32 vertLength,
     return program;
 }
 
-static void resolveShaderIncludes(char* code) {
+void shaderReadFromFile(const char* filename) {
+    FILE* file = fopen(filename, "r");
 
+    char line[256];
+    while (fgets(line, sizeof(line), file)) {
+        char* s;
+        if (s = stringStartsWith(line, "#include \"")) {
+            printf("%s\n", s);
+            stringTrimEnd(s, '\n');
+            stringTrimEnd(s, '\"');
+            printf("%s\n", s);
+        }
+    }
+
+    fclose(file);
 }
 
 u32 shaderLoad(const char* name) {

@@ -57,23 +57,86 @@ void objToSmoothShadedMesh(OBJ* obj, MeshData* out_data) {
     u32 index = 0;
     for (int i = 0; i < listLength(obj->faces); i++) {
         // every vertex of one face has the same normal index, so its okay to do vertices[0]
-        u32 normalIndex = obj->faces[i].vertices[0].normal_index;
+        //u32 normalIndex = obj->faces[i].vertices[0].normal_index;
 
         // this is not the vertex normal, but it is the face normal
-        vec3 normal = obj->normals[normalIndex];
+        //vec3 normal = obj->normals[normalIndex];
 
         for (int k = 0; k < 3; k++) {
             u32 vIndex = obj->faces[i].vertices[k].pos_index;
             
-            vec3* np = &out_data->vertices[vIndex].normal;
-            vec3Add(np, normal); // add face normal to vertex normal
+            //vec3* np = &out_data->vertices[vIndex].normal;
+            //vec3Add(np, normal); // add face normal to vertex normal
             
             out_data->indices[index++] = vIndex;
         }
     }
 
+    /*
     for (int i = 0; i < out_data->vertexCount; i++) {
         vec3Normalize(&out_data->vertices[i].normal);
+    }
+    */
+
+    meshGenNormals(out_data);   
+
+}
+
+
+/*
+
+    algo draft:
+
+        create lookup table of verts with size of listLength(obj->positions)
+
+        loop faces
+            loop verts in face
+                check to see if the vertex already exist in lookup table
+                if so:
+                    test face normal with every other face that is registered to this vertex
+                    if the face normal deviates 
+                if not:
+                    initialize the vertex in lookup table
+                    add to final vertex array
+        
+
+*/
+
+typedef struct Node {
+    face* face;
+    struct Node* next;
+} Node;
+
+static void addFace(Node* node, face* face) {
+    if (node->face) {
+        node->next = malloc(sizeof(Node));
+        node->next->face = face;
+    } else {
+        node->face = face;
+    }
+}
+
+void objToMesh(OBJ* obj, u32 normal_threshold_angle, MeshData* out_data) {
+    
+    u32 vertFacesLen = listLength(obj->positions);
+    Node vertFaces[vertFacesLen];
+    
+    for (int i = 0; i < listLength(obj->faces); i++) {
+        face* face = &obj->faces[i];
+        for (int k = 0; k < 3; k++) {
+            addFace(&vertFaces[face->vertices[k].pos_index], face);
+        }
+    
+    
+        u32 normalIndex = face->vertices[0].normal_index;
+        vec3 faceNormal = obj->normals[normalIndex];
+
+
+    }
+
+    for (int i = 0; i < vertFacesLen; i++) {
+        Node* node = &vertFaces[i];
+
     }
 }
 

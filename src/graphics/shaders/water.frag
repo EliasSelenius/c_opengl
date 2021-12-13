@@ -30,5 +30,14 @@ void main() {
 
     vec3 waterColor = vec3(0.2, 0.6, 0.7);
 
-    FragColor = vec4(waterColor * lightScale, 1.0);
+    vec4 shallowColor = vec4(waterColor + vec3(0.1), 0.4);
+    vec4 deepColor = vec4(waterColor - vec3(0.1), 1.0);
+
+
+    float depth = length(frag.fragpos);
+    float alpha = depth / 20.0;
+    alpha = clamp(alpha, 0.0, 1.0);
+    vec4 finalColor = mix(shallowColor, deepColor, alpha);
+    
+    FragColor = vec4(finalColor.xyz * lightScale, finalColor.w);
 }

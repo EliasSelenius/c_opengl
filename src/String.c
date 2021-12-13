@@ -19,3 +19,10 @@ char* stringStartsWith(char* text, const char* start) {
         i++;
     }
 }
+
+void stringTrimEnd(char* str, char c) {
+    char* end = str + strlen(str);
+    while (*--end == c);
+    *(end+1) = '\0';  
+    
+}
