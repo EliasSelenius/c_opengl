@@ -20,6 +20,7 @@
 #include "graphics/Camera.h"
 
 #include "Gameobject.h"
+#include "Scene.h"
 
 #include "graphics/obj.h"
 
@@ -37,12 +38,13 @@ vec2 wasd;
 
 
 Gameobject planeObject, triangleObject, pyramidObject, boatObject, smoothBoateObject;
-
+Scene scene;
 
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
     printf("resize: %d * %d\n", width, height);
     glViewport(0, 0, width, height);
+    framebufferResize(app.fbo, width, height);
 }
 
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods) {
@@ -75,6 +77,20 @@ int appInit() {
     glfwSetFramebufferSizeCallback(app.window, framebuffer_size_callback);
     glfwSetKeyCallback(app.window, key_callback);
 
+    // load shaders:
+    app.defShader = shaderLoad("def");
+    app.waterShader = shaderLoad("water");
+    app.scqShader = shaderLoad("scq");
+    glUseProgram(app.defShader);
+
+    FramebufferFormat attachments[1] = {
+        FBF_rgba8
+    };
+
+    i32 w, h;
+    glfwGetFramebufferSize(app.window, &w, &h);
+    app.fbo = framebufferCreate(w, h, 1, attachments, FBD_DepthComponent);
+
 
     initUBO(&app.cameraUBO, "Camera", sizeof(mat4) * 2);
     initUBO(&app.modelUBO, "Model", sizeof(mat4));
@@ -85,6 +101,9 @@ int appInit() {
     glEnable(GL_CULL_FACE);
 
     // TODO look up glMultiDrawElements()
+
+
+    sceneInit(&scene);
 
 
     return 1;
@@ -100,8 +119,8 @@ static void cameraFlyControll() {
 
 
     if (glfwGetMouseButton(app.window, GLFW_MOUSE_BUTTON_RIGHT)) {
-        f32 l = vec3Length(cam_model.row1.xyz);
-        printf("len: %f\n", l);
+        // f32 l = vec3Length(cam_model.row1.xyz);
+        // printf("len: %f\n", l);
 
         transformRotateAxisAngle(&g_Camera.transform, cam_model.row1.xyz, -dmouse_y / 100.0);
         transformRotateAxisAngle(&g_Camera.transform, (vec3) { 0, 1, 0 }, dmouse_x / 100.0);
@@ -131,22 +150,54 @@ static void drawframe() {
     cameraFlyControll();
     cameraUse(&g_Camera);
 
-    glUseProgram(app.waterShader);
-    // water
-    planeObject.transform.position.x = round(g_Camera.transform.position.x);
-    planeObject.transform.position.z = round(g_Camera.transform.position.z);
-    gameobjectRender(&planeObject);
+    glBindFramebuffer(GL_FRAMEBUFFER, app.fbo->id);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    { // objektoj
+        glUseProgram(app.defShader);
+        glDisable(GL_BLEND);
+
+        // triangle
+        transformRotateAxisAngle(&triangleObject.transform, (vec3){0,1,0}, 0.1f);
+        gameobjectRender(&triangleObject);
+
+        transformRotateAxisAngle(&pyramidObject.transform, (vec3){0,1,0}, 0.02f);
+        gameobjectRender(&pyramidObject);
+
+        gameobjectRender(&boatObject);
+        gameobjectRender(&smoothBoateObject);
+
+
+        sceneRender(&scene);
+    }
+
+    i32 w, h;
+    glfwGetFramebufferSize(app.window, &w, &h);
+
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, app.fbo->id);
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+    glBlitFramebuffer(0,0,w,h, 0,0,w,h, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
+
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+    { // draw screen quad
+        glBindTexture(GL_TEXTURE_2D, app.fbo->attachments[0].texture);
+        glUseProgram(app.scqShader);
+        glDisable(GL_DEPTH_TEST);
+        glDrawArrays(GL_TRIANGLES, 0, 6);
+    }
     
-    glUseProgram(app.defShader);
-    // triangle
-    transformRotateAxisAngle(&triangleObject.transform, (vec3){0,1,0}, 0.1f);
-    gameobjectRender(&triangleObject);
 
-    transformRotateAxisAngle(&pyramidObject.transform, (vec3){0,1,0}, 0.02f);
-    gameobjectRender(&pyramidObject);
-
-    gameobjectRender(&boatObject);
-    gameobjectRender(&smoothBoateObject);
+    { // water
+        glUseProgram(app.waterShader);
+        glEnable(GL_BLEND);
+        glEnable(GL_DEPTH_TEST);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        
+        planeObject.transform.position.x = round(g_Camera.transform.position.x);
+        planeObject.transform.position.z = round(g_Camera.transform.position.z);
+        gameobjectRender(&planeObject);
+    }
 
 }
 
@@ -173,6 +224,7 @@ static void updateInput() {
 
 
 int main() {
+
 
     //shaderReadFromFile("src/graphics/shaders/def.frag");
 
@@ -222,23 +274,19 @@ int main() {
         meshCreate(objData[0].vertexCount, objData[0].vertices, objData[0].indexCount, objData[0].indices, &m);
         Mesh sm;
         meshCreate(objData[1].vertexCount, objData[1].vertices, objData[1].indexCount, objData[1].indices, &sm);
-        
+
 
 
         gameobjectInit(&m, &boatObject);
         gameobjectInit(&sm, &smoothBoateObject);
 
         boatObject.transform.position = (vec3) { 20, -5, 0 };
-        smoothBoateObject.transform.position = (vec3) { 30, -5, 0 };
+        smoothBoateObject.transform.position = (vec3) { 30, -10, 0 };
     }
 
 
 
-    // load shaders:
-    app.defShader = shaderLoad("def");
-    app.waterShader = shaderLoad("water");
 
-    glUseProgram(app.defShader);
 
 
     // Camera
@@ -264,9 +312,6 @@ int main() {
     meshCreate(planeData.vertexCount, planeData.vertices, planeData.indexCount, planeData.indices, &plane);
 
     
-    mat4 model, planeModel;
-    mat4SetIdentity(&model);
-
 
     gameobjectInit(&plane, &planeObject);
     planeObject.transform.position = (vec3) {0, -3, -4};
