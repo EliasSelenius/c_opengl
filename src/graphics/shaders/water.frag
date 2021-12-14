@@ -59,7 +59,7 @@ void main() {
     
     float geometryDepth = texture(u_depthTexture, uv).x;
 
-    float waterDepth = -frag.fragpos.z;
+    float waterDepth = length(frag.fragpos);
 
     float depth = geometryDepth - waterDepth;
     depth = clamp(depth, 0.0, u_depthVisibility) / u_depthVisibility;

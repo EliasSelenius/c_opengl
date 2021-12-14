@@ -300,7 +300,7 @@ int main() {
         gameobjectInit(&sm, &smoothBoateObject);
 
         boatObject.transform.position = (vec3) { 20, -5, 0 };
-        smoothBoateObject.transform.position = (vec3) { 30, -6, 0 };
+        smoothBoateObject.transform.position = (vec3) { 30, -10, 0 };
     }
 
 
