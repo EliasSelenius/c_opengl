@@ -1,10 +1,28 @@
 #version 330 core
 
+// Application UBO
+layout (std140) uniform Application {
+    vec4 time_delta_width_height;
+} app;
+
+float getTime() {
+    return app.time_delta_width_height.x;
+}
+
+vec2 getViewportSize() {
+    return app.time_delta_width_height.zw;
+}
+
+// END Application UBO
+
 
 layout (std140) uniform Camera {
     mat4 view;
     mat4 projection;
 } camera;
+
+uniform sampler2D u_depthTexture;
+uniform float u_depthVisibility = 3.0;
 
 out vec4 FragColor;
 
@@ -17,6 +35,7 @@ in Fragdata {
 void main() {
     //if (length(frag.fragpos) > 25) discard; 
 
+
     vec3 ld = normalize(vec3(1, 1, 1));
     vec3 lightDir = (camera.view * vec4(ld, 0.0)).xyz;
 
@@ -28,16 +47,30 @@ void main() {
 
     float lightScale = ambientScale + diffuseScale + specularScale;
 
-    vec3 waterColor = vec3(0.2, 0.6, 0.7);
 
-    vec4 shallowColor = vec4(waterColor + vec3(0.1), 0.4);
+
+
+    vec3 waterColor = vec3(0.2, 0.5, 0.8);
+
+    vec4 shallowColor = vec4(waterColor + vec3(0.1), 0.5);
     vec4 deepColor = vec4(waterColor - vec3(0.1), 1.0);
 
-
-    float depth = length(frag.fragpos);
-    float alpha = depth / 20.0;
-    alpha = clamp(alpha, 0.0, 1.0);
-    vec4 finalColor = mix(shallowColor, deepColor, alpha);
+    vec2 uv = gl_FragCoord.xy / getViewportSize();
     
+    float geometryDepth = texture(u_depthTexture, uv).x;
+
+    float waterDepth = -frag.fragpos.z;
+
+    float depth = geometryDepth - waterDepth;
+    depth = clamp(depth, 0.0, u_depthVisibility) / u_depthVisibility;
+    
+    vec4 finalColor = mix(shallowColor, deepColor, depth) + vec4(step(depth, 0.01));
+    
+    // FragColor = vec4(waterColor, 1.0);
     FragColor = vec4(finalColor.xyz * lightScale, finalColor.w);
+    // FragColor = vec4(vec3(depth), 1.0);
+
+
+    FragColor.rgb = pow(FragColor.rgb, vec3(1.0/2.2));
+
 }

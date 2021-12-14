@@ -8,6 +8,7 @@ layout (std140) uniform Camera {
 } camera;
 
 out vec4 FragColor;
+out float FragDepth;
 
 in Fragdata {
     vec3 fragpos;
@@ -27,4 +28,5 @@ void main() {
     //FragColor = vec4(normal, 1.0);
     //FragColor = vec4(lightDir, 1.0);
     FragColor = frag.color * max(dot(normal, lightDir), 0.0);
+    FragDepth = -frag.fragpos.z;
 }

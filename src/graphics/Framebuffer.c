@@ -37,15 +37,33 @@ static void getGLFormat(FramebufferFormat format, GLint* out_internalFormat, GLe
             *out_type           = GL_INT;
             break;
 
+        case FBF_float16:
+            *out_internalFormat = GL_R16F;
+            *out_format         = GL_RED;
+            *out_type           = GL_FLOAT;
+            break;
+        case FBF_float32:
+            *out_internalFormat = GL_R32F;
+            *out_format         = GL_RED;
+            *out_type           = GL_FLOAT;
+            break;
+
         default:
-            printf("Framebuffer format not supported");
+            printf("Framebuffer format not supported\n");
     }
 }
 
+
 static void initDepth(Framebuffer* fb) {
-    glBindRenderbuffer(GL_RENDERBUFFER, fb->depthAttachment);
-    glRenderbufferStorage(GL_RENDERBUFFER, fb->depthFormat, fb->width, fb->height);
-    glBindRenderbuffer(GL_RENDERBUFFER, 0);
+    if (fb->depthFormat == FBD_DepthComponentTexture) {
+        glBindTexture(GL_TEXTURE_2D, fb->depthAttachment);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, fb->width, fb->height, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+        glBindTexture(GL_TEXTURE_2D, 0);
+    } else {
+        glBindRenderbuffer(GL_RENDERBUFFER, fb->depthAttachment);
+        glRenderbufferStorage(GL_RENDERBUFFER, fb->depthFormat, fb->width, fb->height);
+        glBindRenderbuffer(GL_RENDERBUFFER, 0);
+    }
 }
 
 Framebuffer* framebufferCreate(u32 w, u32 h, u32 attachmentCount, FramebufferFormat* attachmentFormats, FramebufferDepthFormat depthFormat) {
@@ -59,9 +77,26 @@ Framebuffer* framebufferCreate(u32 w, u32 h, u32 attachmentCount, FramebufferFor
 
     res->depthFormat = depthFormat;
     if (res->depthFormat != FBD_None) {
-        glGenRenderbuffers(1, &res->depthAttachment);
-        initDepth(res);    
-        glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, res->depthAttachment);
+        if (res->depthFormat == FBD_DepthComponentTexture) {
+            glGenTextures(1, &res->depthAttachment);
+            glBindTexture(GL_TEXTURE_2D, res->depthAttachment);
+            
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, WrapMode_ClampToEdge);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, WrapMode_ClampToEdge);
+
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, Filter_Nearest);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, Filter_Nearest);
+            
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, res->width, res->height, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+            
+            glBindTexture(GL_TEXTURE_2D, 0);
+            
+            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, res->depthAttachment, 0);
+        } else {
+            glGenRenderbuffers(1, &res->depthAttachment);
+            initDepth(res);
+            glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, res->depthAttachment);
+        }
     }
 
 
@@ -90,7 +125,7 @@ Framebuffer* framebufferCreate(u32 w, u32 h, u32 attachmentCount, FramebufferFor
 
     GLenum code = glCheckFramebufferStatus(GL_FRAMEBUFFER);
     if (code != GL_FRAMEBUFFER_COMPLETE) {
-        printf("Framebuffer error code: %d", code);
+        printf("Framebuffer error code: %d\n", code);
     }
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);

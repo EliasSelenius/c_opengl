@@ -5,7 +5,8 @@
 
 typedef enum FramebufferDepthFormat {
     FBD_None = 0,
-    FBD_DepthComponent = GL_DEPTH_COMPONENT
+    FBD_DepthComponent = GL_DEPTH_COMPONENT,
+    FBD_DepthComponentTexture
 
 } FramebufferDepthFormat;
 
@@ -16,7 +17,11 @@ typedef enum FramebufferFormat {
     FBF_rgba16f,
     FBF_rgb16f,
 
-    FBF_int32
+    FBF_int32,
+
+    FBF_float16,
+    FBF_float32
+    
 } FramebufferFormat;
 
 typedef struct FBattachment {

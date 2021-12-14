@@ -1,8 +1,19 @@
 #version 330 core
 
+// Application UBO
 layout (std140) uniform Application {
-    float time;
+    vec4 time_delta_width_height;
 } app;
+
+float getTime() {
+    return app.time_delta_width_height.x;
+}
+
+vec2 getViewportSize() {
+    return app.time_delta_width_height.zw;
+}
+
+// END Application UBO
 
 layout (std140) uniform Model {
     mat4 model;
@@ -24,7 +35,8 @@ out Fragdata {
 } v;
 
 float waveHeight(vec2 pos) {
-    return sin((pos.x - pos.y) / 3.0 + (app.time)) * 0.5;
+    return sin((pos.x - pos.y) / 3.0 + (getTime())) * 0.5;
+    // return 0;
 }
 
 void main() {

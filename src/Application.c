@@ -41,11 +41,20 @@ Gameobject planeObject, triangleObject, pyramidObject, boatObject, smoothBoateOb
 Scene scene;
 
 
+static void bufferViewportSizeToUBO(f32 res[2]) {
+    glBindBuffer(GL_ARRAY_BUFFER, app.appUBO->bufferId);
+    glBufferSubData(GL_ARRAY_BUFFER, sizeof(f32) * 2, sizeof(f32) * 2, res);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+}
+
 void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
     printf("resize: %d * %d\n", width, height);
     glViewport(0, 0, width, height);
     framebufferResize(app.fbo, width, height);
+
+    bufferViewportSizeToUBO((f32[2]){width, height});
 }
+
 
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods) {
     //printf("%i, %i, %i, %i\n", key, scancode, action, mods);
@@ -77,24 +86,29 @@ int appInit() {
     glfwSetFramebufferSizeCallback(app.window, framebuffer_size_callback);
     glfwSetKeyCallback(app.window, key_callback);
 
+
     // load shaders:
     app.defShader = shaderLoad("def");
     app.waterShader = shaderLoad("water");
+    glUniform1ui(glGetUniformLocation(app.waterShader, "u_depthTexture"), 0);
     app.scqShader = shaderLoad("scq");
     glUseProgram(app.defShader);
 
-    FramebufferFormat attachments[1] = {
-        FBF_rgba8
+    FramebufferFormat attachments[] = {
+        FBF_rgba8,
+        FBF_float16
     };
 
     i32 w, h;
     glfwGetFramebufferSize(app.window, &w, &h);
-    app.fbo = framebufferCreate(w, h, 1, attachments, FBD_DepthComponent);
+    app.fbo = framebufferCreate(w, h, 2, attachments, FBD_DepthComponent);
 
 
     initUBO(&app.cameraUBO, "Camera", sizeof(mat4) * 2);
     initUBO(&app.modelUBO, "Model", sizeof(mat4));
-    initUBO(&app.appUBO, "Application", sizeof(f32));
+    initUBO(&app.appUBO, "Application", sizeof(f32) * 4);
+    bufferViewportSizeToUBO((f32[2]){w,h});
+
 
     //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     glEnable(GL_DEPTH_TEST);
@@ -152,6 +166,8 @@ static void drawframe() {
 
     glBindFramebuffer(GL_FRAMEBUFFER, app.fbo->id);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    const f32 depth_clear = 100.0;
+    glClearBufferfv(GL_COLOR, 1, &depth_clear);
 
     { // objektoj
         glUseProgram(app.defShader);
@@ -174,6 +190,7 @@ static void drawframe() {
     i32 w, h;
     glfwGetFramebufferSize(app.window, &w, &h);
 
+    // copy depth buffer
     glBindFramebuffer(GL_READ_FRAMEBUFFER, app.fbo->id);
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
     glBlitFramebuffer(0,0,w,h, 0,0,w,h, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
@@ -190,6 +207,8 @@ static void drawframe() {
 
     { // water
         glUseProgram(app.waterShader);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, app.fbo->attachments[1].texture);
         glEnable(GL_BLEND);
         glEnable(GL_DEPTH_TEST);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -281,7 +300,7 @@ int main() {
         gameobjectInit(&sm, &smoothBoateObject);
 
         boatObject.transform.position = (vec3) { 20, -5, 0 };
-        smoothBoateObject.transform.position = (vec3) { 30, -10, 0 };
+        smoothBoateObject.transform.position = (vec3) { 30, -6, 0 };
     }
 
 
@@ -322,7 +341,9 @@ int main() {
     while (!glfwWindowShouldClose(app.window)) {
 
         f32 time = glfwGetTime();
-        bufferInit(app.appUBO->bufferId, &time, sizeof(time));
+        glBindBuffer(GL_ARRAY_BUFFER, app.appUBO->bufferId);
+        glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(time), &time);
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
 
         updateInput();
         drawframe();
