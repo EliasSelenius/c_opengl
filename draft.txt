@@ -1,3 +1,21 @@
+
+high-level todos:
+    
+    - boyancy
+    - cloth physics for sails and flags/banners
+    - fish boids
+    - sea-serpent procedural animation
+
+    Graphics:
+    - water splash particles
+    - underwater effects: fog and ambient particles
+    - water waves when heavy objects interact with water
+    - small riples when particles interact with water
+    - long distance water rendering 
+    
+
+
+// matrix inverse from OpenTK
 private static unsafe void InvertFallback(in Matrix4 mat, out Matrix4 result)
 {
     // Original implementation can be found here:
