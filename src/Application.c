@@ -40,6 +40,10 @@ vec2 wasd;
 Gameobject planeObject, triangleObject, pyramidObject, boatObject, smoothBoateObject;
 Scene scene;
 
+f32 waterHeight(f32 x, f32 y) {
+    f32 time = glfwGetTime();
+    return sin((x - y) / 3.0 + time) * 0.5;
+}
 
 static void bufferViewportSizeToUBO(f32 res[2]) {
     glBindBuffer(GL_ARRAY_BUFFER, app.appUBO->bufferId);
@@ -166,7 +170,7 @@ static void drawframe() {
 
     glBindFramebuffer(GL_FRAMEBUFFER, app.fbo->id);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    const f32 depth_clear = 100.0;
+    const f32 depth_clear = 99999.0;
     glClearBufferfv(GL_COLOR, 1, &depth_clear);
 
     { // objektoj
@@ -262,6 +266,7 @@ int main() {
 
     if (!appInit()) return -1;
 
+
     { // pyramid
         OBJ obj;
         objLoad("src/models/pyramid.obj", &obj);
@@ -300,43 +305,37 @@ int main() {
         gameobjectInit(&sm, &smoothBoateObject);
 
         boatObject.transform.position = (vec3) { 20, -5, 0 };
-        smoothBoateObject.transform.position = (vec3) { 30, -10, 0 };
+        smoothBoateObject.transform.position = (vec3) { 30, -6, 0 };
+    }
+
+    { // triangle
+        vertex data[] = {
+            {-1, -1, 0,   0,0,0,   1, 0, 0, 1},
+            {0, 1, 0,     0,0,0,   0, 1, 0, 1},
+            {1, -1, 0,    0,0,0,   0, 0, 1, 1}
+        };
+        u32 ind[] = { 0, 2, 1 };
+        Mesh mesh;
+        meshCreate(3, data, 3, ind, &mesh);
+        gameobjectInit(&mesh, &triangleObject);
+    }
+
+    { // water
+        // plane
+        Mesh plane;
+        MeshData planeData;
+        genPlane(&planeData, 1000);
+        meshCreate(planeData.vertexCount, planeData.vertices, planeData.indexCount, planeData.indices, &plane);
+
+        gameobjectInit(&plane, &planeObject);
+        planeObject.transform.position = (vec3) {0, -3, -4};
     }
 
 
-
-
-
-
     // Camera
-    cameraInit(&g_Camera, 3.14 / 2.0, 0.1, 100.0);
+    cameraInit(&g_Camera, 3.14 / 2.0, 0.1, 1000.0);
     cameraUse(&g_Camera);
     
-
-    // Mesh
-    vertex data[] = {
-        {-1, -1, 0,   0,0,0,   1, 0, 0, 1},
-        {0, 1, 0,     0,0,0,   0, 1, 0, 1},
-        {1, -1, 0,    0,0,0,   0, 0, 1, 1}
-    };
-    u32 ind[] = { 0, 2, 1 };
-    Mesh mesh;
-    meshCreate(3, data, 3, ind, &mesh);
-
-
-    // plane
-    Mesh plane;
-    MeshData planeData;
-    genPlane(&planeData, 50);
-    meshCreate(planeData.vertexCount, planeData.vertices, planeData.indexCount, planeData.indices, &plane);
-
-    
-
-    gameobjectInit(&plane, &planeObject);
-    planeObject.transform.position = (vec3) {0, -3, -4};
-
-    gameobjectInit(&mesh, &triangleObject);
-
 
     while (!glfwWindowShouldClose(app.window)) {
 
@@ -347,6 +346,8 @@ int main() {
 
         updateInput();
         drawframe();
+
+        smoothBoateObject.transform.position.y = -3 + waterHeight(smoothBoateObject.transform.position.x, smoothBoateObject.transform.position.z);
 
         glfwSwapBuffers(app.window);
         glfwPollEvents();
