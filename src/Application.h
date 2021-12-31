@@ -14,6 +14,9 @@ typedef struct Application {
     Ublock* appUBO;
     Ublock* cameraUBO;
     Ublock* modelUBO;
+
+    f64 time, prevtime, deltatime;
+    
 } Application;
 
 extern Application app;
