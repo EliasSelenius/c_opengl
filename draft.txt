@@ -12,6 +12,7 @@ high-level todos:
     - water waves when heavy objects interact with water
     - small riples when particles interact with water
     - long distance water rendering 
+    - bioluminecent life (emission by bloom)
     
 
 
