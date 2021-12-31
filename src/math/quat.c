@@ -41,7 +41,14 @@ void quatFromAxisAngle(vec3* axis, f32 angle, quat* out_result) {
     out_result->w = cos(ha);
 }
 
-void quatToAxisAngle(quat* q, f32* out_angle, vec3* out_axis);
+void quatToAxisAngle(quat* q, f32* out_angle, vec3* out_axis) {
+    if (q->w > 1.0f) quatNormalize(q);
+    f32 _acos = acos(q->w);
+    *out_angle = 2.0f * _acos;
+    f32 _sin = sin(_acos);
+    if (_sin < 0.001f) *out_axis = (vec3) { 1, 0, 0 };
+    else *out_axis = (vec3) { q->x / _sin, q->y / _sin, q->z / _sin };
+}
 
 void quatFromMatrix(mat4* m, quat* out_result);
 void quatToMatrix(quat* q, mat4* out_result) {

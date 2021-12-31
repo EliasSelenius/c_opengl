@@ -26,8 +26,9 @@ STATIC_ASSERT(sizeof(vec4) == 16, "Expected vec4 to be 16 bytes.");
 
 
 // A quaternion in the form: w + xi + yj + zk
-typedef struct quat {
-    f32 x, y, z, w;
+typedef union quat {
+    struct { f32 x, y, z, w; };
+    vec3 xyz;
 } quat;
 
 
