@@ -24,6 +24,8 @@
 #include "Scene.h"
 #include "Physics.h"
 
+#include <assert.h>
+
 
 /*
     - water shader
@@ -379,6 +381,19 @@ int main() {
                 if (glfwGetKey(app.window, GLFW_KEY_T)) {
                     boatObject.transform.position.z += 1;
                 }
+
+
+                if (glfwGetKey(app.window, GLFW_KEY_J)) {
+                    quat q0;
+                    quatFromAxisAngle(&(vec3) { 0, 1, 0 }, 3.141599f / 2.0f, &q0);
+                    quat q1 = { 0, 0, 0, 1 };
+
+                    static f32 t = 0;
+                    t += 0.05f;
+
+                    quatSlerp(&q0, &q1, t, &boatObject.transform.rotation);
+                    printf("J");
+                }
             }
             
             // gravity
@@ -396,11 +411,11 @@ int main() {
             vec3Scale(&boatRb.velocity, 0.95f);
             
             // angular dampning
-            vec3 axis;
+            /* vec3 axis;
             f32 angle;
             quatToAxisAngle(&boatRb.rotational_velocity, &angle, &axis);
             angle *= 0.99f;
-            quatFromAxisAngle(&axis, angle, &boatRb.rotational_velocity);
+            quatFromAxisAngle(&axis, angle, &boatRb.rotational_velocity); */
             
             
             rbApplyToTransform(&boatRb, &smoothBoateObject.transform);

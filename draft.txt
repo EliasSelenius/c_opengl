@@ -83,3 +83,23 @@ private static unsafe void InvertFallback(in Matrix4 mat, out Matrix4 result)
         +(a * fk_gj - b * ek_gi + c * ej_fi)) * invDet;
 #pragma warning restore SA1407 // Arithmetic expressions should declare precedence
 }
+
+
+
+
+
+
+
+
+IDE idea
+
+ - high focus, low distraction text editor
+ - texture viewer/editor
+ - model viewer/editor
+ - codebase statistics
+    - languages
+    - lines of code
+    - TODO comments
+ - graph calc
+ - spreadsheet
+ - fancy scifi file explorer
