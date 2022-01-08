@@ -38,6 +38,27 @@ void mat4Mul(mat4* left, mat4* right, mat4* out_result) {
     }*/
 }
 
+void mat4MulVec3(vec3* res, mat4* m) {
+    // vec4 v = { res->x, res->y, res->z, 1.0f };
+    // *res = (vec3) { vec4Dot(&m->row1, &v), vec4Dot(&m->row2, &v), vec4Dot(&m->row3, &v) };
+
+    *res = (vec3) {
+        res->x * m->row1.x   +   res->y * m->row2.x   +   res->z * m->row3.x   +   m->row4.x,
+        res->x * m->row1.y   +   res->y * m->row2.y   +   res->z * m->row3.y   +   m->row4.y,
+        res->x * m->row1.z   +   res->y * m->row2.z   +   res->z * m->row3.z   +   m->row4.z
+        // res->x * m->row1.w   +   res->y * m->row2.w   +   res->z * m->row3.w   +   res->w * m->row4.w,
+    };
+}
+
+void mat4MulVec4(vec4* res, mat4* m) {
+    *res = (vec4) {
+        res->x * m->row1.x   +   res->y * m->row2.x   +   res->z * m->row3.x   +   res->w * m->row4.x,
+        res->x * m->row1.y   +   res->y * m->row2.y   +   res->z * m->row3.y   +   res->w * m->row4.y,
+        res->x * m->row1.z   +   res->y * m->row2.z   +   res->z * m->row3.z   +   res->w * m->row4.z,
+        res->x * m->row1.w   +   res->y * m->row2.w   +   res->z * m->row3.w   +   res->w * m->row4.w,
+    };
+}
+
 void mat4SetIdentity(mat4* m) {
     m->row1 = (vec4){ 1, 0, 0, 0 };
     m->row2 = (vec4){ 0, 1, 0, 0 };

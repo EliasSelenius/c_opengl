@@ -6,6 +6,8 @@
 
 void mat4Mul(mat4* left, mat4* right, mat4* out_result);
 void mat4MulScalar(mat4* m, float scalar);
+void mat4MulVec3(vec3* res, mat4* m);
+
 
 void mat4SetIdentity(mat4* m);
 void mat4Transpose(mat4* m, mat4* out_result);

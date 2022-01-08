@@ -20,6 +20,13 @@ void quatMul(quat* left, quat* right, quat* out_result) {
     };
 }
 
+quat conjugate(quat q) {
+    q.x = -q.x;
+    q.y = -q.y;
+    q.z = -q.z;
+    return q;
+}
+
 void quatNormalize(quat* q) {
     f32 l = sqrt(q->x * q->x + q->y * q->y + q->z * q->z + q->w * q->w);
     q->x /= l;
@@ -32,7 +39,6 @@ void quatSetIdentity(quat* q) {
 }
 
 void quatSlerp(quat* a, quat* b, f32 t, quat* out_result) {
-    //Quaternion slerp(Quaternion const &v0, Quaternion const &v1, double t) {
     // v0 and v1 should be unit length or else
     // something broken will happen.
     
@@ -83,6 +89,22 @@ void quatSlerp(quat* a, quat* b, f32 t, quat* out_result) {
         a->w * cos_t + c.w * sin_t,
         
     };
+}
+
+void quatRotateVec3(quat rot, vec3* v) {
+
+    quat p = (quat) { v->x, v->y, v->z, 0 }; // construct a quaternion whose i j k coefficients are x y z respectively, and real part is equal zero
+
+    quatMul(&rot, &p, &p);
+
+    // create the conjugate of rot
+    rot.x = -rot.x;
+    rot.y = -rot.y;
+    rot.z = -rot.z;
+
+    quatMul(&p, &rot, &p);
+
+    *v = p.xyz;
 }
 
 void quatFromAxisAngle(vec3* axis, f32 angle, quat* out_result) {

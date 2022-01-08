@@ -79,6 +79,7 @@ int appInit() {
         return -1;
     
     
+	
     app.window = glfwCreateWindow(1600, 900, "Test window", NULL, NULL);
     if (!app.window) {
         glfwTerminate();
@@ -313,7 +314,8 @@ int main() {
     { // boat Rb
         boatRb = (Rigidbody) {
             .mass = 1.0f,
-            .rotational_velocity = (quat) { 0.0f, 0.0f, 0.0f, 1.0f }
+            .rotational_velocity = (quat) { 0.0f, 0.0f, 0.0f, 1.0f },
+            .transform = &smoothBoateObject.transform
         };
         
         //quatFromAxisAngle(&(vec3) {0, 1, 0}, 0.01f, &boatRb.rotational_velocity);
@@ -347,7 +349,13 @@ int main() {
     cameraInit(&g_Camera, 3.14 / 2.0, 0.1, 1000.0);
     cameraUse(&g_Camera);
     
-    
+    {
+        quat rot;
+        quatFromAxisAngle(&(vec3) { 0, 1, 0 }, -3.141599f / 2.0f, &rot);
+        transformRotate(&smoothBoateObject.transform, rot);
+    }
+
+
     while (!glfwWindowShouldClose(app.window)) {
         
         app.prevtime = app.time;
@@ -364,22 +372,21 @@ int main() {
         
         { // rigidbody physics
             
+            vec3 forceOffset = (vec3) { 10.0f, 10.0f, 10.0f };
+
             { // input
                 if (glfwGetKey(app.window, GLFW_KEY_G)) {
-                    // quat t;
-                    // quatFromAxisAngle(&(vec3) {0, 1, 0}, 0.01f, &t);
-                    // rbAddTorque(&boatRb, t);
-                    
-                    // rbAddForceAtLocation(&boatRb, (vec3) { 0, 1.0f * app.deltatime, 0 }, (vec3) { 0, 0, 10.0f });
-                    // rbAddForceAtLocation(&boatRb, (vec3) {0, 0.1f, 0}, (vec3) {0, 0, -10});
-                    
-                    quat rot;
-                    quatFromAxisAngle(&(vec3) { 0, 1, 0 }, app.deltatime * 10.0f, &rot);
-                    rbAddTorque(&boatRb, rot);
-                }
+					
+                    rbAddForceAtLocation(&boatRb, (vec3) { 0, 1.0f * app.deltatime, 0 }, forceOffset);
+                
+				}
                 
                 if (glfwGetKey(app.window, GLFW_KEY_T)) {
-                    boatObject.transform.position.z += 1;
+                    // boatObject.transform.position.z += 1;
+
+                    quat q;
+                    quatFromAxisAngle(&(vec3){ 1, 0, 0 }, 3.14f / 2.0f, &q);
+                    quatRotateVec3(q, &pyramidObject.transform.position);
                 }
 
 
@@ -396,8 +403,11 @@ int main() {
                 }
             }
             
+            pyramidObject.transform.position = forceOffset;
+            //vec3Add(&pyramidObject.transform.position, smoothBoateObject.transform.position);
+
+
             // gravity
-            //rbAddForce(&boatRb, (vec3){ 0, -app.deltatime, 0} );
             boatRb.velocity.y -= 10 * app.deltatime;
             
             // bouancy
@@ -417,8 +427,9 @@ int main() {
             angle *= 0.99f;
             quatFromAxisAngle(&axis, angle, &boatRb.rotational_velocity); */
             
-            
-            rbApplyToTransform(&boatRb, &smoothBoateObject.transform);
+            if (app.deltatime < 0.1) {
+                rbUpdate(&boatRb);
+            }
         }
         
         
