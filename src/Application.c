@@ -314,8 +314,8 @@ int main() {
     { // boat Rb
         boatRb = (Rigidbody) {
             .mass = 1.0f,
-            .rotational_velocity = (quat) { 0.0f, 0.0f, 0.0f, 1.0f },
-            .transform = &smoothBoateObject.transform
+            //.rotational_velocity = (quat) { 0.0f, 0.0f, 0.0f, 1.0f },
+			.transform = &smoothBoateObject.transform
         };
         
         //quatFromAxisAngle(&(vec3) {0, 1, 0}, 0.01f, &boatRb.rotational_velocity);
@@ -372,13 +372,26 @@ int main() {
         
         { // rigidbody physics
             
-            vec3 forceOffset = (vec3) { 10.0f, 10.0f, 10.0f };
+			vec3 offsets[] = {
+				{ 2.1f, 1.8f, 13.0f },
+				{ -2.1f, 1.8f, 13.0f },
+				
+				{ 2.1f, 1.8f, -13.0f },
+				{ -2.1f, 1.8f, -13.0f }
+			};
+			
 
             { // input
                 if (glfwGetKey(app.window, GLFW_KEY_G)) {
-					
-                    rbAddForceAtLocation(&boatRb, (vec3) { 0, 1.0f * app.deltatime, 0 }, forceOffset);
-                
+
+                    // rbAddTorque(&boatRb, (vec3) { 1, 0, 0} );
+                    // rbAddTorque(&boatRb, (vec3) { 0, 0, 1 } );
+
+					/* for (u32 i = 0; i < 4; i++) {
+						rbAddForceAtLocation(&boatRb, (vec3) { 0, 1.0f * app.deltatime, 0 }, offsets[i]);
+					} */
+
+                    rbAddForce(&boatRb, (vec3) {0, 1, 0});
 				}
                 
                 if (glfwGetKey(app.window, GLFW_KEY_T)) {
@@ -403,30 +416,43 @@ int main() {
                 }
             }
             
-            pyramidObject.transform.position = forceOffset;
-            //vec3Add(&pyramidObject.transform.position, smoothBoateObject.transform.position);
 
 
             // gravity
             boatRb.velocity.y -= 10 * app.deltatime;
             
-            // bouancy
+            /* // bouancy
             f32 water = -3 + waterHeight(smoothBoateObject.transform.position.x, smoothBoateObject.transform.position.z);
             if (smoothBoateObject.transform.position.y < water) {
                 f32 dist = smoothBoateObject.transform.position.y - water;
                 rbAddForce(&boatRb, (vec3) {0, (-dist * app.deltatime * 10), 0} );
-            }
+            } */
+			
+
+			{ // bouancy
+				mat4 m;
+				transformToMatrix(boatRb.transform, &m);
+								
+				for (u32 i = 0; i < 4; i++) {
+					vec3 o = offsets[i];
+					mat4MulVec3(&o, &m);
+					f32 water = -3 + waterHeight(o.x, o.z);
+					if (o.y < water) {
+						//printf("%d is underwater\n", i);
+						f32 dist = o.y - water;
+						rbAddForceAtLocation(&boatRb, (vec3) { 0, -dist * 2.5f * app.deltatime, 0 }, offsets[i]);	
+					}
+				}
+			}
+				
             
             // air friction
             vec3Scale(&boatRb.velocity, 0.95f);
             
             // angular dampning
-            /* vec3 axis;
-            f32 angle;
-            quatToAxisAngle(&boatRb.rotational_velocity, &angle, &axis);
-            angle *= 0.99f;
-            quatFromAxisAngle(&axis, angle, &boatRb.rotational_velocity); */
-            
+            vec3Scale(&boatRb.angularVelocity, 0.95f);
+
+            // TODO remove this if?
             if (app.deltatime < 0.1) {
                 rbUpdate(&boatRb);
             }

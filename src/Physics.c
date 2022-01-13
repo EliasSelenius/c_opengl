@@ -16,7 +16,6 @@ void rbAddForceAtLocation(Rigidbody* rb, vec3 force, vec3 offset) {
     rbAddForce(rb, force);
 
     
-
 	{ // make offset be local to rb rotation
 	
 		mat4 m;
@@ -32,19 +31,23 @@ void rbAddForceAtLocation(Rigidbody* rb, vec3 force, vec3 offset) {
 
     vec3 axis;
     vec3Cross(&force, &offset, &axis);
-    
-    f32 len = vec3Length(axis);
-    vec3Scale(&axis, 1.0f / len); // normalize axis
-
-    // len = vec3Length(offset);
-    quat torque;
-    quatFromAxisAngle(&axis, len, &torque);
-    rbAddTorque(rb, torque);
+    // TODO: axis is angular acceleration, not torque?
+    rbAddTorque(rb, axis);
 }
 
-void rbAddTorque(Rigidbody* rb, quat torque) {
-    quatMul(&rb->rotational_velocity, &torque, &rb->rotational_velocity);
+void rbAddTorqueQuat(Rigidbody* rb, quat torque) {
+    vec3 axis; f32 angle;
+    quatToAxisAngle(&torque, &angle, &axis);
+    vec3Scale(&axis, angle);
+    rbAddTorque(rb, axis);
+
+    //quatMul(&rb->rotational_velocity, &torque, &rb->rotational_velocity);
     // quatNormalize(&rb->rotational_velocity);
+}
+
+void rbAddTorque(Rigidbody* rb, vec3 axisAngle) {
+    // TODO: mass / inertia ?
+    vec3Add(&rb->angularVelocity, axisAngle);    
 }
 
 void rbUpdate(Rigidbody* rb) {
@@ -57,12 +60,25 @@ void rbUpdate(Rigidbody* rb) {
 
 
     // rotate and scale by deltatime
-    quat rotation;
+    /* quat rotation;
     quatMul(&rb->transform->rotation, &rb->rotational_velocity, &rotation);   // transforms rotation after one second
     quatNormalize(&rotation);
 
     quatSlerp(&rb->transform->rotation, &rotation, app.deltatime, &rotation); // scale by deltatime
 
     quatNormalize(&rotation);
-    rb->transform->rotation = rotation; 
+    rb->transform->rotation = rotation; */
+	
+	
+	{ // rotate by axisangle
+        vec3 axis = rb->angularVelocity;
+        f32 len = vec3Length(axis);
+        if (len > 0.0001) {
+            vec3Scale(&axis, 1.0f / len); // normalize axis
+            transformRotateAxisAngle(rb->transform, axis, len * app.deltatime);
+        }
+	}
+	
+	
+	
 }

@@ -8,14 +8,15 @@
 typedef struct Rigidbody {
     f32 mass;
     vec3 velocity;
-    quat rotational_velocity;
-
+    vec3 angularVelocity;
     Transform* transform;
 } Rigidbody;
 
 void rbAddForce(Rigidbody* rb, vec3 force);
 void rbAddForceAtLocation(Rigidbody* rb, vec3 force, vec3 offset);
 
-void rbAddTorque(Rigidbody* rb, quat torque);
+void rbAddTorqueQuat(Rigidbody* rb, quat torque);
+void rbAddTorque(Rigidbody* rb, vec3 axisAngle);
+
 
 void rbUpdate(Rigidbody* rb);
