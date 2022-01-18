@@ -1,14 +1,45 @@
 #include "String.h"
 #include <string.h>
 
-String* stringCreate(const char* text) {
-    int len = strlen(text);
-    String* res = malloc(sizeof(String) + sizeof(char) * len);
-    res->length = len;
-    for (int i = 0; i < len; i++) { res->characters[i] = text[i]; }
 
-    return res;
+Strview svFrom(char* str) {
+    return (Strview) {
+        .length = strlen(str),
+        .data = str
+    };
 }
+
+void svCopyTo(Strview src, char* dest) {
+    for (u32 i = 0; i < src.length; i++) dest[i] = src.data[i];
+    // TODO: should we null terminate dest?
+}
+
+Strview svTrim(Strview sv) {
+    return svTrimStart(svTrimEnd(sv));
+}
+
+static b8 isWhitespace(char c) {
+    return c == ' ' || c == '\n' || c == '\t';
+}
+
+Strview svTrimStart(Strview sv) {
+    while (isWhitespace(*sv.data)) {
+        sv.data++;
+        sv.length--;
+    }
+    return sv;
+}
+
+Strview svTrimEnd(Strview sv) {
+    char* end = sv.data + sv.length;
+    while (isWhitespace(*--end));
+    sv.length = end - sv.data + 1;
+    return sv;
+}
+
+
+
+
 
 char* stringStartsWith(char* text, const char* start) {
     int i = 0;
