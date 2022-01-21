@@ -23,6 +23,7 @@ typedef struct MeshData {
 } MeshData;
 
 void meshCreate(u32 vertexCount, vertex* vertices, u32 indexCount, u32* indices, Mesh* out_mesh);
+void meshFromData(MeshData* data, Mesh* out_mesh);
 void meshRender(Mesh* mesh);
 void meshDelete(Mesh* mesh);
 

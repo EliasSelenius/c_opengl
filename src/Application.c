@@ -248,27 +248,136 @@ static void updateInput() {
     }
 }
 
+void boatBouancy(Rigidbody* rb) {
+    static vec3 offsets[] = {
+        { 2.1f,  -0.2f, 13.0f },
+        { -2.1f, -0.2f, 13.0f },
+        { 2.1f,  -0.2f, -10.0f },
+        { -2.1f, -0.2f, -10.0f }
+    };
+
+    mat4 m;
+    transformToMatrix(rb->transform, &m);
+                    
+    for (u32 i = 0; i < 4; i++) {
+        vec3 o = offsets[i];
+        mat4MulVec3(&o, &m);
+        f32 water = -3 + waterHeight(o.x, o.z);
+        if (o.y < water) {
+            //printf("%d is underwater\n", i);
+            f32 dist = water - o.y;
+            rbAddForceAtLocation(rb, (vec3) { 0, dist * 2.5f * app.deltatime, 0 }, offsets[i]);	
+        }
+    }    
+}
+
+void applyPhysics(Rigidbody* rb) {
+            
+    // gravity
+    rb->velocity.y -= 10 * app.deltatime;
+    
+    boatBouancy(rb);				
+    
+
+    // TODO: linear and angular dampning scaled by deltatime
+    // air friction
+    vec3Scale(&rb->velocity, 0.95f);
+    // angular dampning
+    vec3Scale(&rb->angularVelocity, 0.95f);
+
+    rbUpdate(rb);
+}
+
+#include "math/general.h"
 
 int main() {
-    
+
+    { // test math funcs
+        printf("lerp: 3, 6 = %f\n", lerp(3, 6, 0.5f));
+
+        printf("fract = %f\n", fract(4.512f));
+    }
+
+
+    { // test shader includes
+        shaderReadFromFile("src/graphics/shaders/def.frag");
+    }
+
+
+    { // test string view
+        Strview sv = svFrom("  \t\t Hello There!   \n");
+        sv = svTrim(sv);
+
+        printf("Start with: %d\n", svStartsWith(svFrom("Hello dwajdoaw"), "Hello d"));
+
+        char str[256];
+        svCopyTo(sv, str);
+
+        str[sv.length] = '\0';
+        printf("TEST: |%s|\n", str);
+    }
+
+    { // test stringBuilder
+        StringBuilder sb;
+        sbInit(&sb);
+        sbAppend(&sb, svFrom("Hello"));
+        sbAppend(&sb, svFrom(" "));
+        sbAppend(&sb, svTrim(svFrom("\nWorld   ")));
+        sbAppend(&sb, svFrom("!"));
+
+        char buffer[256] = {};
+        sbCopyIntoBuffer(&sb, buffer, 256);
+        //buffer[5] = '\0';
+        printf("Buffer Content:\n%s\n", buffer);
+
+        sbDestroy(&sb);
+    }
+
+    // return 0;
     
     //shaderReadFromFile("src/graphics/shaders/def.frag");
     
     
-    /*{ // dynamic array test
-        vec3* list = listCreate(vec3);
-        listAdd(list, (&(vec3) { 1, 0, 0}));
-        listAdd(list, (&(vec3) { 0, 1, 0}));
-        listAdd(list, (&(vec3) { 0, 0, 1}));
-        listAdd(list, (&(vec3) { 1, 1, 1}));
-
-        for (int i = 0; i < listLength(list); i++) {
-            printf("[%i] = %f, %f, %f\n", i, list[i].x, list[i].y, list[i].z);
-        }
-    }*/
-    
     if (!appInit()) return -1;
     
+
+    { // Island
+        MeshData planeData;
+        genPlane(&planeData, 100);
+
+        for (u32 i = 0; i < planeData.vertexCount; i++) {
+            f32 x = planeData.vertices[i].pos.x;
+            f32 z = planeData.vertices[i].pos.z;
+            f32 d = x*x + z*z;
+            planeData.vertices[i].pos.y = -d / 200.0f;
+            const f32 freq = 15.0f;
+            planeData.vertices[i].pos.y += gnoise2(1000.0f + (x / freq), 1000.0f + (z / freq)) * 7.0f;
+
+            if (planeData.vertices[i].pos.y > -2) {
+                planeData.vertices[i].color = (vec4) { 0.1f, 0.9f, 0.2f, 1.0f };
+            } else {
+                planeData.vertices[i].color = (vec4) { 1.0f, 1.0f, 101.0f / 256.0f, 1.0f };
+            }
+        }
+
+        meshGenNormals(&planeData);
+
+        Mesh islandMesh;
+        meshFromData(&planeData, &islandMesh);
+
+        Gameobject obj = {
+            .mesh = &islandMesh,
+            .parent = NULL,
+            .transform = {
+                .position = { -20, 0, 0 },
+                .rotation = { 0, 0, 0, 1 },
+                .scale = { 1, 1, 1 }
+            }
+        };
+
+        listAdd(scene.gameobjects, obj);
+    }
+
     
     { // pyramid
         OBJ obj;
@@ -307,8 +416,8 @@ int main() {
         gameobjectInit(&m, &boatObject);
         gameobjectInit(&sm, &smoothBoateObject);
         
-        boatObject.transform.position = (vec3) { 20, -5, 0 };
-        smoothBoateObject.transform.position = (vec3) { 30, -6, 0 };
+        boatObject.transform.position = (vec3) { 20, 4, 0 };
+        smoothBoateObject.transform.position = (vec3) { 30, 0, 0 };
     }
     
     { // boat Rb
@@ -349,12 +458,7 @@ int main() {
     cameraInit(&g_Camera, 3.14 / 2.0, 0.1, 1000.0);
     cameraUse(&g_Camera);
     
-    {
-        quat rot;
-        quatFromAxisAngle(&(vec3) { 0, 1, 0 }, -3.141599f / 2.0f, &rot);
-        transformRotate(&smoothBoateObject.transform, rot);
-    }
-
+    static f64 acTime = 0.0;
 
     while (!glfwWindowShouldClose(app.window)) {
         
@@ -362,107 +466,47 @@ int main() {
         app.time = glfwGetTime();
         app.deltatime = app.time - app.prevtime;
         
+
+
         f32 time = app.time;
         glBindBuffer(GL_ARRAY_BUFFER, app.appUBO->bufferId);
         glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(time), &time);
         glBindBuffer(GL_ARRAY_BUFFER, 0);
         
+
         updateInput();
         drawframe();
-        
-        { // rigidbody physics
+
+        acTime += app.deltatime;
+        if (acTime > 0.016) {
+            acTime -= 0.016;
+            app.deltatime = 0.016;
             
-			vec3 offsets[] = {
-				{ 2.1f, 1.8f, 13.0f },
-				{ -2.1f, 1.8f, 13.0f },
-				
-				{ 2.1f, 1.8f, -13.0f },
-				{ -2.1f, 1.8f, -13.0f }
-			};
-			
-
-            { // input
-                if (glfwGetKey(app.window, GLFW_KEY_G)) {
-
-                    // rbAddTorque(&boatRb, (vec3) { 1, 0, 0} );
-                    // rbAddTorque(&boatRb, (vec3) { 0, 0, 1 } );
-
-					/* for (u32 i = 0; i < 4; i++) {
-						rbAddForceAtLocation(&boatRb, (vec3) { 0, 1.0f * app.deltatime, 0 }, offsets[i]);
-					} */
-
-                    rbAddForce(&boatRb, (vec3) {0, 1, 0});
-				}
-                
-                if (glfwGetKey(app.window, GLFW_KEY_T)) {
-                    // boatObject.transform.position.z += 1;
-
-                    quat q;
-                    quatFromAxisAngle(&(vec3){ 1, 0, 0 }, 3.14f / 2.0f, &q);
-                    quatRotateVec3(q, &pyramidObject.transform.position);
-                }
-
-
-                if (glfwGetKey(app.window, GLFW_KEY_J)) {
-                    quat q0;
-                    quatFromAxisAngle(&(vec3) { 0, 1, 0 }, 3.141599f / 2.0f, &q0);
-                    quat q1 = { 0, 0, 0, 1 };
-
-                    static f32 t = 0;
-                    t += 0.05f;
-
-                    quatSlerp(&q0, &q1, t, &boatObject.transform.rotation);
-                    printf("J");
-                }
-            }
+            applyPhysics(&boatRb);
             
+            static Rigidbody rb = (Rigidbody) {
+                .mass = 1.0f,
+                .transform = &boatObject.transform
+            };
 
-
-            // gravity
-            boatRb.velocity.y -= 10 * app.deltatime;
-            
-            /* // bouancy
-            f32 water = -3 + waterHeight(smoothBoateObject.transform.position.x, smoothBoateObject.transform.position.z);
-            if (smoothBoateObject.transform.position.y < water) {
-                f32 dist = smoothBoateObject.transform.position.y - water;
-                rbAddForce(&boatRb, (vec3) {0, (-dist * app.deltatime * 10), 0} );
-            } */
-			
-
-			{ // bouancy
-				mat4 m;
-				transformToMatrix(boatRb.transform, &m);
-								
-				for (u32 i = 0; i < 4; i++) {
-					vec3 o = offsets[i];
-					mat4MulVec3(&o, &m);
-					f32 water = -3 + waterHeight(o.x, o.z);
-					if (o.y < water) {
-						//printf("%d is underwater\n", i);
-						f32 dist = o.y - water;
-						rbAddForceAtLocation(&boatRb, (vec3) { 0, -dist * 2.5f * app.deltatime, 0 }, offsets[i]);	
-					}
-				}
-			}
-				
-            
-            // air friction
-            vec3Scale(&boatRb.velocity, 0.95f);
-            
-            // angular dampning
-            vec3Scale(&boatRb.angularVelocity, 0.95f);
-
-            // TODO remove this if?
-            if (app.deltatime < 0.1) {
-                rbUpdate(&boatRb);
-            }
+            applyPhysics(&rb);
         }
-        
-        
+
+        printf("deltatime: %f\n", app.deltatime);
+
         glfwSwapBuffers(app.window);
         glfwPollEvents();
     }
     
+    if (random((i32)app.time) < 0) {
+        printf("Commencing Program Self-Destruct...\n");
+    } else {
+        printf("Program Committed Suicide...\n");
+        // Program Was Slain By User. Game Over.
+        // Program Ran Out Of Battery Power...
+        // Program Was Terminated. *sad program noises*
+    }
+
     glfwDestroyWindow(app.window);
     glfwTerminate();
 }

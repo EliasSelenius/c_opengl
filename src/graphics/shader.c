@@ -90,16 +90,19 @@ u32 shaderCreate(const char* vert, i32 vertLength,
 
 void shaderReadFromFile(const char* filename) {
     FILE* file = fopen(filename, "r");
+    
+    StringBuilder strb;
+    StringBuilder* sb = &strb;
 
     char line[256];
     while (fgets(line, sizeof(line), file)) {
         char* s;
-        if (s = stringStartsWith(line, "#include \"")) {
-            printf("%s\n", s);
+        if ((s = stringStartsWith(line, "#include \""))) {
             stringTrimEnd(s, '\n');
             stringTrimEnd(s, '\"');
-            printf("%s\n", s);
+            printf("|%s|\n", s);
         }
+
     }
 
     fclose(file);

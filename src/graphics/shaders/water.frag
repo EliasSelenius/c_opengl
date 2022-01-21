@@ -22,7 +22,7 @@ layout (std140) uniform Camera {
 } camera;
 
 uniform sampler2D u_depthTexture;
-uniform float u_depthVisibility = 4.0;
+uniform float u_depthVisibility = 10.0;
 
 out vec4 FragColor;
 

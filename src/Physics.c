@@ -40,9 +40,6 @@ void rbAddTorqueQuat(Rigidbody* rb, quat torque) {
     quatToAxisAngle(&torque, &angle, &axis);
     vec3Scale(&axis, angle);
     rbAddTorque(rb, axis);
-
-    //quatMul(&rb->rotational_velocity, &torque, &rb->rotational_velocity);
-    // quatNormalize(&rb->rotational_velocity);
 }
 
 void rbAddTorque(Rigidbody* rb, vec3 axisAngle) {
@@ -54,31 +51,12 @@ void rbUpdate(Rigidbody* rb) {
     vec3 translation = rb->velocity;
     vec3Scale(&translation, app.deltatime);
     vec3Add(&rb->transform->position, translation);
-
-
-    // printf("deltaT: %f\n", app.deltatime);
-
-
-    // rotate and scale by deltatime
-    /* quat rotation;
-    quatMul(&rb->transform->rotation, &rb->rotational_velocity, &rotation);   // transforms rotation after one second
-    quatNormalize(&rotation);
-
-    quatSlerp(&rb->transform->rotation, &rotation, app.deltatime, &rotation); // scale by deltatime
-
-    quatNormalize(&rotation);
-    rb->transform->rotation = rotation; */
 	
 	
-	{ // rotate by axisangle
-        vec3 axis = rb->angularVelocity;
-        f32 len = vec3Length(axis);
-        if (len > 0.0001) {
-            vec3Scale(&axis, 1.0f / len); // normalize axis
-            transformRotateAxisAngle(rb->transform, axis, len * app.deltatime);
-        }
-	}
-	
-	
-	
+    vec3 axis = rb->angularVelocity;
+    f32 len = vec3Length(axis);
+    if (len > 0.0001) { // make sure the angularVelocity is not zero
+        vec3Scale(&axis, 1.0f / len); // normalize axis
+        transformRotateAxisAngle(rb->transform, axis, len * app.deltatime);
+    }
 }

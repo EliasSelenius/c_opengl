@@ -35,6 +35,9 @@ void meshCreate(u32 vertexCount, vertex* vertices, u32 indexCount, u32* indices,
     glBindVertexArray(0);
 }
 
+void meshFromData(MeshData* data, Mesh* out_mesh) {
+    meshCreate(data->vertexCount, data->vertices, data->indexCount, data->indices, out_mesh);
+}
 
 void meshRender(Mesh* mesh) {
     glBindVertexArray(mesh->vao);
