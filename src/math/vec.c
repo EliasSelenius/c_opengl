@@ -1,6 +1,11 @@
 #include "vec.h"
 #include <math.h>
 
+
+f32 vec2Dot(vec2 a, vec2 b) {
+    return a.x * b.x + a.y * b.y;
+}
+
 void vec2Normalize(vec2* v) {
     f32 l = sqrt(v->x * v->x + v->y * v->y);
     v->x /= l;

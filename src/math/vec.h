@@ -3,6 +3,7 @@
 #include "../types.h"
 #include "structs.h"
 
+f32 vec2Dot(vec2 a, vec2 b);
 void vec2Normalize(vec2* v);
 
 void vec3Add(vec3* a, vec3 b);
