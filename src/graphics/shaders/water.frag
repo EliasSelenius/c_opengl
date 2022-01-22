@@ -1,25 +1,7 @@
 #version 330 core
 
-// Application UBO
-layout (std140) uniform Application {
-    vec4 time_delta_width_height;
-} app;
-
-float getTime() {
-    return app.time_delta_width_height.x;
-}
-
-vec2 getViewportSize() {
-    return app.time_delta_width_height.zw;
-}
-
-// END Application UBO
-
-
-layout (std140) uniform Camera {
-    mat4 view;
-    mat4 projection;
-} camera;
+#include "app.glsl"
+#include "camera.glsl"
 
 uniform sampler2D u_depthTexture;
 uniform float u_depthVisibility = 10.0;

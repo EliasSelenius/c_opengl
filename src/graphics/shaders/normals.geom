@@ -1,9 +1,6 @@
 #version 330 core
 
-layout (std140) uniform Camera {
-    mat4 view;
-    mat4 projection;
-} camera;
+#include "camera.glsl"
 
 layout (points) in;
 layout (line_strip, max_vertices = 2) out;

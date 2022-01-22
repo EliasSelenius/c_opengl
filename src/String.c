@@ -107,7 +107,7 @@ void sbAppend(StringBuilder* sb, char* str) {
         i++;
     }
 
-    // make sure the content is zero-terminated, so that it can be use as a c string
+    // make sure the content is zero-terminated, so that it can be used as a c string
     sb->content[sb->length] = '\0';
 }
 
@@ -118,7 +118,7 @@ void sbAppendView(StringBuilder* sb, Strview str) {
         sb->content[sb->length++] = str.data[i];
     }
 
-    // make sure the content is zero-terminated, so that it can be use as a c string
+    // make sure the content is zero-terminated, so that it can be used as a c string
     sb->content[sb->length] = '\0';
 }
 

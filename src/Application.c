@@ -292,19 +292,24 @@ void applyPhysics(Rigidbody* rb) {
 
 int main() {
 
-    { // test math funcs
+    if (false) { // test math funcs
         printf("lerp: 3, 6 = %f\n", lerp(3, 6, 0.5f));
 
         printf("fract = %f\n", fract(4.512f));
     }
 
 
-    { // test shader includes
-        shaderReadFromFile("src/graphics/shaders/def.frag");
+    if (false) { // test shader includes
+        StringBuilder sb;
+        sbInit(&sb);
+
+        shaderLoadSource(&sb, "def.frag");
+
+        printf("%s", sb.content);
     }
 
 
-    { // test string view
+    if (false) { // test string view
         Strview sv = svFrom("  \t\t Hello There!   \n");
         sv = svTrim(sv);
 
@@ -317,7 +322,7 @@ int main() {
         printf("TEST: |%s|\n", str);
     }
 
-    { // test stringBuilder
+    if (false) { // test stringBuilder
         StringBuilder sb;
         sbInit(&sb);
         sbAppendView(&sb, svFrom("Hello"));
@@ -340,9 +345,8 @@ int main() {
         sbDestroy(&sb);
     }
 
-    return 0;
+    // return 0;
     
-    //shaderReadFromFile("src/graphics/shaders/def.frag");
     
     
     if (!appInit()) return -1;
@@ -499,7 +503,7 @@ int main() {
             applyPhysics(&rb);
         }
 
-        printf("deltatime: %f\n", app.deltatime);
+        // printf("deltatime: %f\n", app.deltatime);
 
         glfwSwapBuffers(app.window);
         glfwPollEvents();

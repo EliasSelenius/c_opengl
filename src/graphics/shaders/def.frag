@@ -1,11 +1,6 @@
 #version 330 core
 
-// #include "test.glsl"
-
-layout (std140) uniform Camera {
-    mat4 view;
-    mat4 projection;
-} camera;
+#include "camera.glsl"
 
 out vec4 FragColor;
 out float FragDepth;
@@ -17,7 +12,8 @@ in Fragdata {
 } frag;
 
 void main() {
-    vec3 ld = normalize(vec3(1, 1, 1));
+    // vec3 ld = normalize(vec3(sin(Time), cos(Time), 0));
+    vec3 ld = normalize(vec3(1.0, 1.0, 1.0));
 
     vec3 lightDir = (camera.view * vec4(ld, 0.0)).xyz;
 

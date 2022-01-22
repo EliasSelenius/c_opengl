@@ -4,20 +4,7 @@
     Screen covering quad fragment shader
 */
 
-// Application UBO
-layout (std140) uniform Application {
-    vec4 time_delta_width_height;
-} app;
-
-float getTime() {
-    return app.time_delta_width_height.x;
-}
-
-vec2 getViewportSize() {
-    return app.time_delta_width_height.zw;
-}
-
-// END Application UBO
+#include "app.glsl"
 
 uniform sampler2D u_texture;
 

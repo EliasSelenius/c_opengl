@@ -10,6 +10,7 @@
             "request": "launch",
             "program": "${workspaceFolder}/bin/c_opengl.exe",
             //"args": ["-arg1", "-arg2"],
+            "preLaunchTask": "build"
         }
         /*{
             "type": "lldb-vscode",

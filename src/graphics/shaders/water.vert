@@ -1,28 +1,11 @@
 #version 330 core
 
-// Application UBO
-layout (std140) uniform Application {
-    vec4 time_delta_width_height;
-} app;
-
-float getTime() {
-    return app.time_delta_width_height.x;
-}
-
-vec2 getViewportSize() {
-    return app.time_delta_width_height.zw;
-}
-
-// END Application UBO
+#include "app.glsl"
+#include "camera.glsl"
 
 layout (std140) uniform Model {
     mat4 model;
 };
-
-layout (std140) uniform Camera {
-    mat4 view;
-    mat4 projection;
-} camera;
 
 layout (location = 0) in vec3 a_Pos;
 layout (location = 1) in vec3 a_Normal;
@@ -35,7 +18,7 @@ out Fragdata {
 } v;
 
 float waveHeight(vec2 pos) {
-    return sin((pos.x - pos.y) / 3.0 + (getTime())) * 0.5;
+    return sin((pos.x - pos.y) / 3.0 + (Time)) * 0.5;
     // return 0;
 }
 

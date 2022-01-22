@@ -88,56 +88,69 @@ u32 shaderCreate(const char* vert, i32 vertLength,
     return program;
 }
 
-void shaderReadFromFile(const char* filename) {
-    FILE* file = fopen(filename, "r");
-    
-    StringBuilder strb;
-    StringBuilder* sb = &strb;
+void shaderLoadSource(StringBuilder* sb, const char* filename) {
 
+    char filepath[256];
+    strcpy_s(filepath, sizeof(filepath), "src/graphics/shaders/");
+    strcat_s(filepath, sizeof(filepath), filename);
+
+    FILE* file = fopen(filepath, "r");
+    
     char line[256];
     while (fgets(line, sizeof(line), file)) {
         char* s;
         if ((s = stringStartsWith(line, "#include \""))) {
             stringTrimEnd(s, '\n');
             stringTrimEnd(s, '\"');
-            printf("|%s|\n", s);
+            // printf("|%s|\n", s);
+            shaderLoadSource(sb, s);
+        } else {
+            sbAppend(sb, line);
         }
-
     }
 
     fclose(file);
 }
 
+
 u32 shaderLoad(const char* name) {
     
     char vertFilename[256];
-    strcpy_s(vertFilename, 256, "src/graphics/shaders/");
-    strcat_s(vertFilename, 256, name);
+    strcpy_s(vertFilename, sizeof(vertFilename), name);
+    strcat_s(vertFilename, sizeof(vertFilename), ".vert");
 
     char fragFilename[256];
-    strcpy_s(fragFilename, 256, vertFilename);
+    strcpy_s(fragFilename, sizeof(fragFilename), name);
+    strcat_s(fragFilename, sizeof(fragFilename), ".frag");
 
     char geomFilename[256];
-    strcpy_s(geomFilename, 256, vertFilename);
-
-    strcat_s(vertFilename, 256, ".vert");
-    strcat_s(fragFilename, 256, ".frag");
-    strcat_s(geomFilename, 256, ".geom");
-    
-
-    //printf("%s, %s\n", vertFilename, fragFilename);
-
-    u32 vlen, flen, glen;
-    char* vert = fileread(vertFilename, &vlen);
-    char* frag = fileread(fragFilename, &flen);
-    char* geom = fileExists(geomFilename) ? fileread(geomFilename, &glen) : NULL;
+    strcpy_s(geomFilename, sizeof(geomFilename), name);
+    strcat_s(geomFilename, sizeof(geomFilename), ".geom");
 
 
-    u32 shader = shaderCreate(vert, vlen, frag, flen, geom, glen);
-    
-    free(vert);
-    free(frag);
-    if (geom) free(geom);
+    StringBuilder vertSb; sbInit(&vertSb);
+    shaderLoadSource(&vertSb, vertFilename);
+
+    StringBuilder fragSb; sbInit(&fragSb);
+    shaderLoadSource(&fragSb, fragFilename);
+
+    b8 hasGeometryShader = fileExists(geomFilename);
+    StringBuilder geomSb;
+    geomSb.content = NULL;
+    geomSb.length = 0;
+    if (hasGeometryShader) {
+        sbInit(&geomSb);
+        shaderLoadSource(&geomSb, geomFilename);
+    }
+
+
+    u32 shader = shaderCreate(vertSb.content, vertSb.length, 
+                              fragSb.content, fragSb.length, 
+                              geomSb.content, geomSb.length);
+
+    sbDestroy(&vertSb);
+    sbDestroy(&fragSb);
+    if (hasGeometryShader) sbDestroy(&geomSb);
 
     return shader;
 }

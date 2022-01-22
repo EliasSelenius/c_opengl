@@ -16,7 +16,8 @@ high-level todos:
     
 
 get done now:
-    - shader include directives
+    - <done> shader include directives
+    - shader noise algos
     - load/create compute shader
     
 
