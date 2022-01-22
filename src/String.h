@@ -21,7 +21,9 @@ Strview svTrimCharEnd(Strview sv, char c);
 b8 svStartsWith(Strview sv, char* start);
 
 
-
+// TODO: make StringBuilder just like lists
+// replace *content with content[]
+// replace void sbInit(StringBuilder*) with StringBuilder* sbCreate()
 typedef struct StringBuilder {
     u32 length;
     u32 capacity;

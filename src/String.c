@@ -83,7 +83,7 @@ void sbDestroy(StringBuilder* sb) {
 
 static void growBufferSize(StringBuilder* sb, u32 additionalSpace) {
     u32 newLength = sb->length + additionalSpace;
-    
+
     // NOTE: we do <= (as opposed to only <) to make sure there is space for zero termination.
     if (sb->capacity <= newLength) {
         sb->capacity *= 2;
@@ -102,7 +102,7 @@ void sbAppend(StringBuilder* sb, char* str) {
 
     u32 i = 0;
     while (true) {
-        if (str[i] == '\0') return;
+        if (str[i] == '\0') break;
         sb->content[sb->length++] = str[i];
         i++;
     }
