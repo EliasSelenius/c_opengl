@@ -1,6 +1,8 @@
 #include "String.h"
-#include <string.h>
 #include "List.h"
+
+#include <string.h>
+#include <stdlib.h>
 
 Strview svFrom(char* str) {
     return (Strview) {
@@ -68,29 +70,61 @@ b8 svStartsWith(Strview sv, char* start) {
 }
 
 void sbInit(StringBuilder* sb) {
+    sb->capacity = 16;
     sb->length = 0;
-    sb->sections = listCreate(Strview);    
+    sb->content = malloc(sb->capacity);
 }
 
 void sbDestroy(StringBuilder* sb) {
-    listDelete(sb->sections);
+    free(sb->content);
+    sb->content = NULL;
+    sb->capacity = sb->length = 0;
 }
 
-void sbAppend(StringBuilder* sb, Strview str) {
-    sb->length += str.length;
-    listAdd(sb->sections, str);
+static void growBufferSize(StringBuilder* sb, u32 additionalSpace) {
+    u32 newLength = sb->length + additionalSpace;
+    
+    // NOTE: we do <= (as opposed to only <) to make sure there is space for zero termination.
+    if (sb->capacity <= newLength) {
+        sb->capacity *= 2;
+
+        // make sure there is sufficent storage space
+        while (sb->capacity <= newLength)
+            sb->capacity *= 2;
+        
+        sb->content = realloc(sb->content, sb->capacity);
+    }
+}
+
+void sbAppend(StringBuilder* sb, char* str) {
+    u32 strLen = strlen(str);
+    growBufferSize(sb, strLen);
+
+    u32 i = 0;
+    while (true) {
+        if (str[i] == '\0') return;
+        sb->content[sb->length++] = str[i];
+        i++;
+    }
+
+    // make sure the content is zero-terminated, so that it can be use as a c string
+    sb->content[sb->length] = '\0';
+}
+
+void sbAppendView(StringBuilder* sb, Strview str) {
+    growBufferSize(sb, str.length);
+
+    for (int i = 0; i < str.length; i++) {
+        sb->content[sb->length++] = str.data[i];
+    }
+
+    // make sure the content is zero-terminated, so that it can be use as a c string
+    sb->content[sb->length] = '\0';
 }
 
 void sbCopyIntoBuffer(StringBuilder* sb, char* buffer, u32 bufferLength) {
-    u32 sectionsCount = listLength(sb->sections);
-    u32 index = 0;
-    for (u32 i = 0; i < sectionsCount; i++) {
-        Strview sv = sb->sections[i];
-        for (u32 j = 0; j < sv.length; j++) {
-            if (index >= bufferLength) return;
-            buffer[index] = sv.data[j];
-            index++;
-        }
+    for (int i = 0; i < sb->length && i < bufferLength; i++) {
+        buffer[i] = sb->content[i];
     }
 }
 

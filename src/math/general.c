@@ -26,7 +26,7 @@ static vec2 randomVec2(f32 x, f32 y) {
 } 
 
 
-
+// One-dimensional value noise.
 f32 vnoise(f32 x) {
     i32 i = (i32)x;
     f32 f = fract(x);
@@ -34,6 +34,7 @@ f32 vnoise(f32 x) {
     return lerp(random(i), random(i + 1), u);    
 }
 
+// Two-dimensional value noise.
 f32 vnoise2(f32 x, f32 y) {
     i32 ix = (i32)x, iy = (i32)y;
     f32 fx = fract(x), fy = fract(y);
@@ -52,7 +53,7 @@ f32 vnoise2(f32 x, f32 y) {
 }
 
 
-
+// Two-dimensional gradient noise.
 f32 gnoise2(f32 x, f32 y) {
     f32 ix = floor(x), iy = floor(y);
     f32 fx = fract(x), fy = fract(y);

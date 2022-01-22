@@ -320,20 +320,27 @@ int main() {
     { // test stringBuilder
         StringBuilder sb;
         sbInit(&sb);
-        sbAppend(&sb, svFrom("Hello"));
-        sbAppend(&sb, svFrom(" "));
-        sbAppend(&sb, svTrim(svFrom("\nWorld   ")));
-        sbAppend(&sb, svFrom("!"));
+        sbAppendView(&sb, svFrom("Hello"));
+        sbAppend(&sb, " ");
+        sbAppendView(&sb, svTrim(svFrom("\nWorld   ")));
+        sbAppendView(&sb, svFrom("!"));
+        sbAppend(&sb, "\n");
+        sbAppendView(&sb, svFrom("Cool"));
+        sbAppendView(&sb, svFrom(" "));
+        sbAppend(&sb, "String Builder");
+        sbAppendView(&sb, svFrom(" dude!"));
 
         char buffer[256] = {};
         sbCopyIntoBuffer(&sb, buffer, 256);
         //buffer[5] = '\0';
         printf("Buffer Content:\n%s\n", buffer);
 
+        printf("Builder:\n    Capacity: %d\n    Length: %d\n    Content:\n%s\n", sb.capacity, sb.length, sb.content);
+
         sbDestroy(&sb);
     }
 
-    // return 0;
+    return 0;
     
     //shaderReadFromFile("src/graphics/shaders/def.frag");
     

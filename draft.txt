@@ -15,6 +15,11 @@ high-level todos:
     - bioluminecent life (emission by bloom)
     
 
+get done now:
+    - shader include directives
+    - load/create compute shader
+    
+
 
 // matrix inverse from OpenTK
 private static unsafe void InvertFallback(in Matrix4 mat, out Matrix4 result)

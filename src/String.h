@@ -24,12 +24,14 @@ b8 svStartsWith(Strview sv, char* start);
 
 typedef struct StringBuilder {
     u32 length;
-    Strview* sections;
+    u32 capacity;
+    char* content;
 } StringBuilder;
 
 void sbInit(StringBuilder* sb);
 void sbDestroy(StringBuilder* sb);
-void sbAppend(StringBuilder* sb, Strview str);
+void sbAppend(StringBuilder* sb, char* str);
+void sbAppendView(StringBuilder* sb, Strview str);
 void sbCopyIntoBuffer(StringBuilder* sb, char* buffer, u32 bufferLength);
 
 
