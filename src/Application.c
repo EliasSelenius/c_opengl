@@ -126,7 +126,34 @@ int appInit() {
     
     sceneInit(&scene);
     
+    // Camera
+    cameraInit(&g_Camera, 3.14 / 2.0, 0.1, 1000.0);
+    cameraUse(&g_Camera);
     
+    { // load properties
+        FILE* file = fopen("src/storage.txt", "r");
+
+        if (file == NULL) {
+            printf("could not read storage.txt\n");
+        } else {
+            char line[256];
+            fgets(line, sizeof(line), file);
+
+            char* cur = line;
+
+            g_Camera.transform.position.x = strtof(cur, &cur);
+            g_Camera.transform.position.y = strtof(cur, &cur);
+            g_Camera.transform.position.z = strtof(cur, &cur);
+
+            g_Camera.transform.rotation.x = strtof(cur, &cur);
+            g_Camera.transform.rotation.y = strtof(cur, &cur);
+            g_Camera.transform.rotation.z = strtof(cur, &cur);
+            g_Camera.transform.rotation.w = strtof(cur, &cur);
+
+            fclose(file);
+        }
+    }
+
     return 1;
 }
 
@@ -465,10 +492,6 @@ int main() {
     }
     
     
-    // Camera
-    cameraInit(&g_Camera, 3.14 / 2.0, 0.1, 1000.0);
-    cameraUse(&g_Camera);
-    
     static f64 acTime = 0.0;
 
     while (!glfwWindowShouldClose(app.window)) {
@@ -508,7 +531,29 @@ int main() {
         glfwSwapBuffers(app.window);
         glfwPollEvents();
     }
+
     
+    { // save properties
+        FILE* file = fopen("src/storage.txt", "w");
+
+        if (file == NULL) {
+            printf("Could not save to storage.txt");
+        } else {
+            fprintf(file, "%f %f %f %f %f %f %f",
+                g_Camera.transform.position.x, 
+                g_Camera.transform.position.y,
+                g_Camera.transform.position.z,
+
+                g_Camera.transform.rotation.x,
+                g_Camera.transform.rotation.y,
+                g_Camera.transform.rotation.z,
+                g_Camera.transform.rotation.w);
+
+            fclose(file);
+        }
+    }
+
+
     if (random((i32)app.time) < 0) {
         printf("Commencing Program Self-Destruct...\n");
     } else {

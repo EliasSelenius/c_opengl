@@ -18,10 +18,10 @@ high-level todos:
 get done now:
     - <done> shader include directives
     - <done> load/create compute shader
+    - <done> load/save camera transform (and other basic properties)
 
     - shader noise algos
     - HDR tone-mapping & gamma-correction
-    - load/save camera transform (and other basic properties)
 
 
 
