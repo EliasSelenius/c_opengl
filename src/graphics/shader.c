@@ -34,6 +34,24 @@ static void bindUBOs(u32 program) {
     }
 }
 
+static b8 checkStatus(u32 program) {
+    i32 status;
+    glGetProgramiv(program, GL_LINK_STATUS, &status);
+
+    if (status == 0) {
+        char infoLog[1024];
+        i32 len;
+        glGetProgramInfoLog(program, sizeof(infoLog), &len, infoLog);
+        printf("%s", infoLog);
+
+        //printf("Vertex source code:\n%s\n\nFragment source code:\n%s\n\n", vert, frag);
+
+        return false;
+    }
+
+    return true;
+}
+
 u32 shaderCreate(const char* vert, i32 vertLength, 
                  const char* frag, i32 fragLength,
                  const char* geom, i32 geomLength) {
@@ -69,19 +87,23 @@ u32 shaderCreate(const char* vert, i32 vertLength,
         glDeleteShader(g);
     }
 
-    i32 status;
-    glGetProgramiv(program, GL_LINK_STATUS, &status);
+    if (!checkStatus(program)) return 0; // fail
 
-    if (status == 0) {
-        char infoLog[1024];
-        i32 len;
-        glGetProgramInfoLog(program, sizeof(infoLog), &len, infoLog);
-        printf("%s", infoLog);
+    bindUBOs(program);
 
-        //printf("Vertex source code:\n%s\n\nFragment source code:\n%s\n\n", vert, frag);
+    return program;
+}
 
-        return 0;
-    }
+u32 shaderCreateCompute(const char* src) {
+    u32 program = glCreateProgram();
+    u32 s = makeShader(program, GL_COMPUTE_SHADER, src, strlen(src));
+
+    glLinkProgram(program);
+    
+    glDetachShader(program, s);
+    glDeleteShader(s);
+
+    if (!checkStatus(program)) return 0; // fail
 
     bindUBOs(program);
 
@@ -153,4 +175,14 @@ u32 shaderLoad(const char* name) {
     if (hasGeometryShader) sbDestroy(&geomSb);
 
     return shader;
+}
+
+
+u32 shaderLoadCompute(const char* name) {
+    StringBuilder sb;
+    sbInit(&sb);
+    shaderLoadSource(&sb, name);
+    u32 p = shaderCreateCompute(sb.content);
+    sbDestroy(&sb);
+    return p;    
 }

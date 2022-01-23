@@ -17,9 +17,17 @@ high-level todos:
 
 get done now:
     - <done> shader include directives
+    - <done> load/create compute shader
+
     - shader noise algos
-    - load/create compute shader
-    
+    - HDR tone-mapping & gamma-correction
+    - load/save camera transform (and other basic properties)
+
+
+
+
+
+
 
 
 // matrix inverse from OpenTK
