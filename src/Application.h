@@ -22,3 +22,4 @@ typedef struct Application {
 extern Application app;
 
 void appExit();
+void appToggleFullscreen();

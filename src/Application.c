@@ -61,9 +61,75 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
     bufferViewportSizeToUBO((f32[2]){width, height});
 }
 
+static GLFWmonitor* getIdealMonitor() {
+
+    i32 windowX, windowY, windowW, windowH;
+    glfwGetWindowPos(app.window, &windowX, &windowY);
+    glfwGetWindowSize(app.window, &windowW, &windowH);
+
+    i32 monitorCount;
+    GLFWmonitor** monitors = glfwGetMonitors(&monitorCount);
+
+    u32 ideal = 0;
+    u32 highestArea = 0;
+    for (u32 i = 0; i < monitorCount; i++) {
+        GLFWmonitor* m = monitors[i];
+
+        i32 mX, mY;
+        glfwGetMonitorPos(m, &mX, &mY);
+        const GLFWvidmode* mode = glfwGetVideoMode(m);
+
+        u32 area = max(0, min(windowX + windowW, mX + mode->width) - max(windowX, mX)) *
+                    max(0, min(windowY + windowH, mY + mode->height) - max(windowY, mY));
+
+        if (area > highestArea) {
+            highestArea = area;
+            ideal = i;
+        }
+
+        // printf("Monitor %d. %s\n    Area: %d\n", i, glfwGetMonitorName(m), area);
+    }
+
+    return monitors[ideal];
+}
+
+void appToggleFullscreen() {
+    GLFWmonitor* monitor = glfwGetWindowMonitor(app.window);
+    if (monitor) {
+
+        // set to windowed 
+
+        i32 mX, mY;
+        glfwGetMonitorPos(monitor, &mX, &mY);
+
+        glfwSetWindowMonitor(app.window, NULL, mX + 60, mY + 60, 1600, 900, 0);
+
+    } else {
+
+        // set to fullscreen
+
+        GLFWmonitor* m = getIdealMonitor();   
+        const GLFWvidmode* mode = glfwGetVideoMode(m);
+        glfwSetWindowMonitor(app.window, m, 0, 0, mode->width, mode->height, mode->refreshRate);
+    }        
+}
 
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods) {
     // printf("%i, %i, %i, %i\n", key, scancode, action, mods);
+
+    if (action == GLFW_RELEASE) {
+
+        if (key == GLFW_KEY_F11) {
+            
+            printf("Toggle Fullscreen\n");
+            appToggleFullscreen();
+
+        } else if (key == GLFW_KEY_ESCAPE) {
+            appExit();
+        }
+    }
+
+
 }
 
 static void initUBO(Ublock** ubo, char* name, u32 size) {
@@ -532,6 +598,7 @@ int main() {
         glfwPollEvents();
     }
 
+    //glfwGetWindowPos
     
     { // save properties
         FILE* file = fopen("src/storage.txt", "w");
@@ -552,6 +619,8 @@ int main() {
             fclose(file);
         }
     }
+
+    
 
 
     if (random((i32)app.time) < 0) {
