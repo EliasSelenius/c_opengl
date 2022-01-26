@@ -52,6 +52,7 @@ static b8 checkStatus(u32 program) {
     return true;
 }
 
+// TODO: remove ugly length parameters
 u32 shaderCreate(const char* vert, i32 vertLength, 
                  const char* frag, i32 fragLength,
                  const char* geom, i32 geomLength) {
@@ -87,7 +88,10 @@ u32 shaderCreate(const char* vert, i32 vertLength,
         glDeleteShader(g);
     }
 
-    if (!checkStatus(program)) return 0; // fail
+    if (!checkStatus(program)) {
+        printf("Failed to link shader.\n");
+        return 0;
+    }
 
     bindUBOs(program);
 
@@ -118,14 +122,29 @@ void shaderLoadSource(StringBuilder* sb, const char* filename) {
 
     FILE* file = fopen(filepath, "r");
     
+    if (!file) {
+        printf("Failed to load shader: %s\n", filename);
+        return;
+    } 
+
+    u32 lineNum = 0;
     char line[256];
     while (fgets(line, sizeof(line), file)) {
+        lineNum++;
         char* s;
         if ((s = stringStartsWith(line, "#include \""))) {
             stringTrimEnd(s, '\n');
             stringTrimEnd(s, '\"');
-            // printf("|%s|\n", s);
+            
+            char str[16];
+            sprintf(str, "#line %d\n", 1);
+            sbAppend(sb, str);
+
             shaderLoadSource(sb, s);
+
+            sprintf(str, "\n#line %d\n", lineNum + 1);
+            sbAppend(sb, str);
+
         } else {
             sbAppend(sb, line);
         }
@@ -134,7 +153,8 @@ void shaderLoadSource(StringBuilder* sb, const char* filename) {
     fclose(file);
 }
 
-
+// TODO: this could be shaderLoadByCommonFileName
+// shaderLoad should take individual filenames for vert, frag and geom
 u32 shaderLoad(const char* name) {
     
     char vertFilename[256];
