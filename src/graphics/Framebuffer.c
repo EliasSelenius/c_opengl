@@ -7,42 +7,42 @@
 
 static void getGLFormat(FramebufferFormat format, GLint* out_internalFormat, GLenum* out_format, GLenum* out_type) {
     switch (format) {
-        case FBF_rgba8:
+        case fbFormat_rgba8:
             *out_internalFormat = GL_RGBA8;
             *out_format         = GL_RGBA;
             *out_type           = GL_BYTE;
             break;
-        case FBF_rgb8: 
+        case fbFormat_rgb8: 
             *out_internalFormat = GL_RGB8;
             *out_format         = GL_RGB;
             *out_type           = GL_BYTE;
             break;
 
 
-        case FBF_rgba16f: 
+        case fbFormat_rgba16f: 
             *out_internalFormat = GL_RGBA16F;
             *out_format         = GL_RGBA;
             *out_type           = GL_FLOAT;
             break;
-        case FBF_rgb16f:
+        case fbFormat_rgb16f:
             *out_internalFormat = GL_RGB16F;
             *out_format         = GL_RGB;
             *out_type           = GL_FLOAT;
             break;
 
 
-        case FBF_int32:
+        case fbFormat_int32:
             *out_internalFormat = GL_R32I;
             *out_format         = GL_RED_INTEGER;
             *out_type           = GL_INT;
             break;
 
-        case FBF_float16:
+        case fbFormat_float16:
             *out_internalFormat = GL_R16F;
             *out_format         = GL_RED;
             *out_type           = GL_FLOAT;
             break;
-        case FBF_float32:
+        case fbFormat_float32:
             *out_internalFormat = GL_R32F;
             *out_format         = GL_RED;
             *out_type           = GL_FLOAT;
@@ -55,7 +55,7 @@ static void getGLFormat(FramebufferFormat format, GLint* out_internalFormat, GLe
 
 
 static void initDepth(Framebuffer* fb) {
-    if (fb->depthFormat == FBD_DepthComponentTexture) {
+    if (fb->depthFormat == fbDepth_DepthComponentTexture) {
         glBindTexture(GL_TEXTURE_2D, fb->depthAttachment);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, fb->width, fb->height, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
         glBindTexture(GL_TEXTURE_2D, 0);
@@ -76,8 +76,8 @@ Framebuffer* framebufferCreate(u32 w, u32 h, u32 attachmentCount, FramebufferFor
 
 
     res->depthFormat = depthFormat;
-    if (res->depthFormat != FBD_None) {
-        if (res->depthFormat == FBD_DepthComponentTexture) {
+    if (res->depthFormat != fbDepth_None) {
+        if (res->depthFormat == fbDepth_DepthComponentTexture) {
             glGenTextures(1, &res->depthAttachment);
             glBindTexture(GL_TEXTURE_2D, res->depthAttachment);
             
@@ -140,7 +140,7 @@ void framebufferResize(Framebuffer* framebuffer, u32 w, u32 h) {
     framebuffer->width = w;
     framebuffer->height = h;
 
-    if (framebuffer->depthFormat != FBD_None) {
+    if (framebuffer->depthFormat != fbDepth_None) {
         initDepth(framebuffer);
     }
 

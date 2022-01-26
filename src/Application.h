@@ -6,10 +6,17 @@
 
 typedef struct Application {
     GLFWwindow* window;
+    u32 width, height;
 
     u32 defShader, waterShader, scqShader;
 
-    Framebuffer* fbo;    
+    u32 gPassShader;
+    u32 dirlightShader;
+    u32 pointlightShader;
+
+    Framebuffer* fbo;
+    Framebuffer* gBuffer;
+    Framebuffer* hdrBuffer;
 
     Ublock* appUBO;
     Ublock* cameraUBO;

@@ -4,23 +4,23 @@
 #include <GL.h>
 
 typedef enum FramebufferDepthFormat {
-    FBD_None = 0,
-    FBD_DepthComponent = GL_DEPTH_COMPONENT,
-    FBD_DepthComponentTexture
+    fbDepth_None = 0,
+    fbDepth_DepthComponent = GL_DEPTH_COMPONENT,
+    fbDepth_DepthComponentTexture
 
 } FramebufferDepthFormat;
 
 typedef enum FramebufferFormat {
-    FBF_rgba8,
-    FBF_rgb8,
+    fbFormat_rgba8,
+    fbFormat_rgb8,
 
-    FBF_rgba16f,
-    FBF_rgb16f,
+    fbFormat_rgba16f,
+    fbFormat_rgb16f,
 
-    FBF_int32,
+    fbFormat_int32,
 
-    FBF_float16,
-    FBF_float32
+    fbFormat_float16,
+    fbFormat_float32
     
 } FramebufferFormat;
 

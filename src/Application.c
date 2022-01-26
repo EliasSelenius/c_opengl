@@ -55,9 +55,14 @@ static void bufferViewportSizeToUBO(f32 res[2]) {
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
     printf("resize: %d * %d\n", width, height);
+    
+    app.width = width;
+    app.height = height;
+    
     glViewport(0, 0, width, height);
     framebufferResize(app.fbo, width, height);
-    
+    framebufferResize(app.gBuffer, width, height);
+
     bufferViewportSizeToUBO((f32[2]){width, height});
 }
 
@@ -79,6 +84,7 @@ static GLFWmonitor* getIdealMonitor() {
         glfwGetMonitorPos(m, &mX, &mY);
         const GLFWvidmode* mode = glfwGetVideoMode(m);
 
+        // TODO: better min/max macros or inline functions
         u32 area = max(0, min(windowX + windowW, mX + mode->width) - max(windowX, mX)) *
                     max(0, min(windowY + windowH, mY + mode->height) - max(windowY, mY));
 
@@ -120,10 +126,7 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
     if (action == GLFW_RELEASE) {
 
         if (key == GLFW_KEY_F11) {
-            
-            printf("Toggle Fullscreen\n");
             appToggleFullscreen();
-
         } else if (key == GLFW_KEY_ESCAPE) {
             appExit();
         }
@@ -138,6 +141,9 @@ static void initUBO(Ublock** ubo, char* name, u32 size) {
     ublockBindBuffer(*ubo, buffer);
 }
 
+static void opengl_debug_callback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* message, const void* userParam) {
+    // printf("opengl error:\n\t %s\n\n", message);
+}
 
 int appInit() {
     
@@ -145,8 +151,9 @@ int appInit() {
         return -1;
     
     
-	
-    app.window = glfwCreateWindow(1600, 900, "Test window", NULL, NULL);
+	app.width = 1600;
+    app.height = 900;
+    app.window = glfwCreateWindow(app.width, app.height, "Test window", NULL, NULL);
     if (!app.window) {
         glfwTerminate();
         return -1;
@@ -158,23 +165,72 @@ int appInit() {
     glfwSetFramebufferSizeCallback(app.window, framebuffer_size_callback);
     glfwSetKeyCallback(app.window, key_callback);
     
+    // GL_DEBUG_OUTPUT_SYNCHRONOUS
+    glEnable(GL_DEBUG_OUTPUT);
+    glDebugMessageCallback(&opengl_debug_callback, NULL);
+
+    { // geometry pass stuff
+        const u32 attachCount = 3;
+        FramebufferFormat attachments[attachCount] = {
+            fbFormat_rgb16f, // position
+            fbFormat_rgb16f, // normal
+            fbFormat_rgb8    // albedo
+
+            // TODO: PBR properties
+        };
+
+        app.gBuffer = framebufferCreate(app.width, app.height, attachCount, attachments, fbDepth_DepthComponent);
+        app.gPassShader = shaderLoad("gPass");        
+    }
+
+    { // light pass stuff
+        FramebufferFormat attachment = fbFormat_rgba16f;
+        app.hdrBuffer = framebufferCreate(app.width, app.height, 1, &attachment, fbDepth_None);
+
+        { // manually load shader. TODO: Maybe we replace this with a function 
+            StringBuilder sbVert;
+            sbInit(&sbVert);
+            shaderLoadSource(&sbVert, "scq.vert");
+
+            StringBuilder sbFrag;
+            sbInit(&sbFrag);
+            shaderLoadSource(&sbFrag, "dirlight.frag");
+
+            app.dirlightShader = shaderCreate(sbVert.content, sbVert.length,
+                                              sbFrag.content, sbFrag.length,
+                                              NULL, 0);
+
+            sbDestroy(&sbVert);
+            sbDestroy(&sbFrag);
+
+            glUseProgram(app.dirlightShader);
+            // glUniform1i(glGetUniformLocation(app.dirlightShader, "gBuffer_Pos"), 0);
+            // glUniform1i(glGetUniformLocation(app.dirlightShader, "gBuffer_Normal"), 1);
+            // glUniform1i(glGetUniformLocation(app.dirlightShader, "gBuffer_Albedo"), 2);
+        }
+
+
+
+
+
+    }
     
     
     // load shaders:
-    app.defShader = shaderLoad("def");
-    app.waterShader = shaderLoad("water");
-    glUniform1ui(glGetUniformLocation(app.waterShader, "u_depthTexture"), 0);
+    // app.defShader = shaderLoad("def");
+    // app.waterShader = shaderLoad("water");
+    // glUniform1ui(glGetUniformLocation(app.waterShader, "u_depthTexture"), 0);
     app.scqShader = shaderLoad("scq");
-    glUseProgram(app.defShader);
+    // glUseProgram(app.defShader);
     
     FramebufferFormat attachments[] = {
-        FBF_rgba8,
-        FBF_float16
+        fbFormat_rgba8,
+        fbFormat_float16
     };
     
     i32 w, h;
     glfwGetFramebufferSize(app.window, &w, &h);
-    app.fbo = framebufferCreate(w, h, 2, attachments, FBD_DepthComponent);
+    app.fbo = framebufferCreate(w, h, 2, attachments, fbDepth_DepthComponent);
     
     
     initUBO(&app.cameraUBO, "Camera", sizeof(mat4) * 2);
@@ -242,9 +298,9 @@ static void cameraFlyControll() {
     
     
     
-    f32 scale = 1.0f;
+    f32 scale = 3.0f;
     if (glfwGetKey(app.window, GLFW_KEY_LEFT_SHIFT)) {
-        scale = 4.0f;
+        scale = 10.0f;
     }
     
     vec3Scale(&cam_model.row3.xyz, wasd.y / 10.0f * scale);
@@ -257,13 +313,65 @@ static void cameraFlyControll() {
 }
 
 static void drawframe() {
-    glClearColor(0,1,1, 1);
+    glClearColor(0,0,0, 1);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     
     
     cameraFlyControll();
     cameraUse(&g_Camera);
-    
+
+
+    { // geometry pass
+        glBindFramebuffer(GL_FRAMEBUFFER, app.gBuffer->id);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+        glEnable(GL_DEPTH_TEST);
+        glDisable(GL_BLEND);
+
+        glUseProgram(app.gPassShader);
+
+        sceneRender(&scene);
+    }
+
+    { // light pass
+        glBindFramebuffer(GL_FRAMEBUFFER, app.hdrBuffer->id);
+        glClear(GL_COLOR_BUFFER_BIT);
+
+        glDisable(GL_DEPTH_TEST);
+        
+        glEnable(GL_BLEND);
+        glBlendEquation(GL_FUNC_ADD);
+        glBlendFunc(GL_ONE, GL_ONE);
+
+        glUseProgram(app.dirlightShader);
+
+        // bind gBuffer for reading
+         
+        for (u32 i = 0; i < app.gBuffer->attachmentCount; i++) {
+            glActiveTexture(GL_TEXTURE0 + i);
+            glBindTexture(GL_TEXTURE_2D, app.gBuffer->attachments[i].texture);
+        } 
+        
+
+        // glActiveTexture(GL_TEXTURE0);
+        // glBindTexture(GL_TEXTURE_2D, app.gBuffer->attachments[0].texture);
+
+        glDrawArrays(GL_TRIANGLES, 0, 6); // draw screen covering quad
+    }
+
+    { // draw to screen
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, app.hdrBuffer->attachments[0].texture);
+        glUseProgram(app.scqShader);
+        glDisable(GL_DEPTH_TEST);
+        glDrawArrays(GL_TRIANGLES, 0, 6);
+    }
+
+
+    //  OLD  // 
+    /*
+
     glBindFramebuffer(GL_FRAMEBUFFER, app.fbo->id);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     const f32 depth_clear = 99999.0;
@@ -317,7 +425,7 @@ static void drawframe() {
         planeObject.transform.position.z = round(g_Camera.transform.position.z);
         gameobjectRender(&planeObject);
     }
-    
+    */    
 }
 
 
@@ -447,15 +555,31 @@ int main() {
 
     { // Island
         MeshData planeData;
-        genPlane(&planeData, 100);
+        genPlane(&planeData, 1000);
 
         for (u32 i = 0; i < planeData.vertexCount; i++) {
             f32 x = planeData.vertices[i].pos.x;
             f32 z = planeData.vertices[i].pos.z;
             f32 d = x*x + z*z;
-            planeData.vertices[i].pos.y = -d / 200.0f;
-            const f32 freq = 15.0f;
-            planeData.vertices[i].pos.y += gnoise2(1000.0f + (x / freq), 1000.0f + (z / freq)) * 7.0f;
+            // planeData.vertices[i].pos.y = -d / 200.0f;
+            // const f32 freq = 100.0f;
+            // planeData.vertices[i].pos.y += gnoise2(1000.0f + (x / freq), 1000.0f + (z / freq)) * 50.0f;
+
+
+            x /= 200.0f;
+            z /= 200.0f;
+            f32 v = 0.0f;
+            for (u32 i = 1; i <= 3; i++) {
+                v += gnoise2(x * i, z * i) / (f32)i;
+            }
+            v *= 4.0f;
+            v *= v * v;
+            // v *= 100.0f;
+
+            planeData.vertices[i].pos.y = v;
+
+            planeData.vertices[i].pos.y -= 50.0f;
+
 
             if (planeData.vertices[i].pos.y > -2) {
                 planeData.vertices[i].color = (vec4) { 0.1f, 0.9f, 0.2f, 1.0f };
@@ -522,6 +646,10 @@ int main() {
         
         boatObject.transform.position = (vec3) { 20, 4, 0 };
         smoothBoateObject.transform.position = (vec3) { 30, 0, 0 };
+
+        // NOTE: we are copying the objects in to the scene.
+        listAdd(scene.gameobjects, boatObject);
+        listAdd(scene.gameobjects, smoothBoateObject);
     }
     
     { // boat Rb
