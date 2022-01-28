@@ -7,6 +7,8 @@
 #include <sys/stat.h>
 
 b8 fileExists(const char* filename) {
+    if (filename == NULL) return false;
+    
     struct stat filestat;
     return stat(filename, &filestat) == 0;
 }

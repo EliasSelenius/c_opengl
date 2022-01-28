@@ -8,6 +8,8 @@ struct gBufferData {
     vec3 pos;
     vec3 normal;
     vec3 albedo;
+    float metallic;
+    float roughness;
 };
 
 gBufferData gBufferRead(vec2 uv) {
@@ -15,5 +17,10 @@ gBufferData gBufferRead(vec2 uv) {
     data.pos = texture(gBuffer_Pos, uv).xyz;
     data.normal = texture(gBuffer_Normal, uv).xyz;
     data.albedo = texture(gBuffer_Albedo, uv).rgb;
+
+    // TODO: implement these in gBuffer
+    data.metallic = 0.2;
+    data.roughness = 0.1;
+
     return data;
 }

@@ -12,3 +12,11 @@ void sceneRender(Scene* scene) {
         gameobjectRender(&scene->gameobjects[i]);
     }
 }
+
+u32 sceneAddObject(Scene* scene, Mesh* mesh) {
+    Gameobject o;
+    gameobjectInit(mesh, &o);
+
+    listAdd(scene->gameobjects, o);
+    return listLength(scene->gameobjects) - 1;
+} 

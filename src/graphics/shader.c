@@ -153,9 +153,7 @@ void shaderLoadSource(StringBuilder* sb, const char* filename) {
     fclose(file);
 }
 
-// TODO: this could be shaderLoadByCommonFileName
-// shaderLoad should take individual filenames for vert, frag and geom
-u32 shaderLoad(const char* name) {
+u32 shaderLoadByName(const char* name) {
     
     char vertFilename[256];
     strcpy_s(vertFilename, sizeof(vertFilename), name);
@@ -169,20 +167,24 @@ u32 shaderLoad(const char* name) {
     strcpy_s(geomFilename, sizeof(geomFilename), name);
     strcat_s(geomFilename, sizeof(geomFilename), ".geom");
 
+    return shaderLoad(fragFilename, vertFilename, geomFilename);
+}
 
+u32 shaderLoad(const char* frag_filename, const char* vert_filename, const char* geom_filename) {
+    
     StringBuilder vertSb; sbInit(&vertSb);
-    shaderLoadSource(&vertSb, vertFilename);
+    shaderLoadSource(&vertSb, vert_filename);
 
     StringBuilder fragSb; sbInit(&fragSb);
-    shaderLoadSource(&fragSb, fragFilename);
+    shaderLoadSource(&fragSb, frag_filename);
 
-    b8 hasGeometryShader = fileExists(geomFilename);
+    b8 hasGeometryShader = fileExists(geom_filename);
     StringBuilder geomSb;
     geomSb.content = NULL;
     geomSb.length = 0;
     if (hasGeometryShader) {
         sbInit(&geomSb);
-        shaderLoadSource(&geomSb, geomFilename);
+        shaderLoadSource(&geomSb, geom_filename);
     }
 
 

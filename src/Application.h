@@ -13,6 +13,7 @@ typedef struct Application {
     u32 gPassShader;
     u32 dirlightShader;
     u32 pointlightShader;
+    u32 hdr2ldrShader;
 
     Framebuffer* fbo;
     Framebuffer* gBuffer;

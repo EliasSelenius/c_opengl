@@ -27,20 +27,18 @@
 #include <assert.h>
 
 
-/*
-    - water shader
-    - model loading
-    - mesh groups
-*/
 
 Application app;
 Camera g_Camera;
 f64 mouse_x, mouse_y, pmouse_x, pmouse_y, dmouse_x, dmouse_y;
 vec2 wasd;
 
-Rigidbody boatRb;
-Gameobject planeObject, triangleObject, pyramidObject, boatObject, smoothBoateObject;
+Rigidbody boatRb, boatRb2;
+Gameobject planeObject, triangleObject, pyramidObject;
+Gameobject* boatObject;
+Gameobject* smoothBoateObject;
 Scene scene;
+
 
 f32 waterHeight(f32 x, f32 y) {
     f32 time = glfwGetTime();
@@ -62,6 +60,7 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
     glViewport(0, 0, width, height);
     framebufferResize(app.fbo, width, height);
     framebufferResize(app.gBuffer, width, height);
+    framebufferResize(app.hdrBuffer, width, height);
 
     bufferViewportSizeToUBO((f32[2]){width, height});
 }
@@ -180,38 +179,14 @@ int appInit() {
         };
 
         app.gBuffer = framebufferCreate(app.width, app.height, attachCount, attachments, fbDepth_DepthComponent);
-        app.gPassShader = shaderLoad("gPass");        
+        app.gPassShader = shaderLoadByName("gPass");        
     }
 
     { // light pass stuff
-        FramebufferFormat attachment = fbFormat_rgba16f;
+        FramebufferFormat attachment = fbFormat_rgb16f;
         app.hdrBuffer = framebufferCreate(app.width, app.height, 1, &attachment, fbDepth_None);
-
-        { // manually load shader. TODO: Maybe we replace this with a function 
-            StringBuilder sbVert;
-            sbInit(&sbVert);
-            shaderLoadSource(&sbVert, "scq.vert");
-
-            StringBuilder sbFrag;
-            sbInit(&sbFrag);
-            shaderLoadSource(&sbFrag, "dirlight.frag");
-
-            app.dirlightShader = shaderCreate(sbVert.content, sbVert.length,
-                                              sbFrag.content, sbFrag.length,
-                                              NULL, 0);
-
-            sbDestroy(&sbVert);
-            sbDestroy(&sbFrag);
-
-            glUseProgram(app.dirlightShader);
-            // glUniform1i(glGetUniformLocation(app.dirlightShader, "gBuffer_Pos"), 0);
-            // glUniform1i(glGetUniformLocation(app.dirlightShader, "gBuffer_Normal"), 1);
-            // glUniform1i(glGetUniformLocation(app.dirlightShader, "gBuffer_Albedo"), 2);
-        }
-
-
-
-
+        app.dirlightShader = shaderLoad("dirlight.frag", "scq.vert", NULL);
+        app.hdr2ldrShader = shaderLoad("hdr2ldr.frag", "scq.vert", NULL);
 
     }
     
@@ -220,7 +195,7 @@ int appInit() {
     // app.defShader = shaderLoad("def");
     // app.waterShader = shaderLoad("water");
     // glUniform1ui(glGetUniformLocation(app.waterShader, "u_depthTexture"), 0);
-    app.scqShader = shaderLoad("scq");
+    app.scqShader = shaderLoadByName("scq");
     // glUseProgram(app.defShader);
     
     FramebufferFormat attachments[] = {
@@ -363,7 +338,7 @@ static void drawframe() {
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, app.hdrBuffer->attachments[0].texture);
-        glUseProgram(app.scqShader);
+        glUseProgram(app.hdr2ldrShader);
         glDisable(GL_DEPTH_TEST);
         glDrawArrays(GL_TRIANGLES, 0, 6);
     }
@@ -634,29 +609,30 @@ int main() {
         
         objFree(&objFile);
         
-        Mesh m;
-        meshCreate(objData[0].vertexCount, objData[0].vertices, objData[0].indexCount, objData[0].indices, &m);
-        Mesh sm;
-        meshCreate(objData[1].vertexCount, objData[1].vertices, objData[1].indexCount, objData[1].indices, &sm);
-        
-        
-        
-        gameobjectInit(&m, &boatObject);
-        gameobjectInit(&sm, &smoothBoateObject);
-        
-        boatObject.transform.position = (vec3) { 20, 4, 0 };
-        smoothBoateObject.transform.position = (vec3) { 30, 0, 0 };
+        Mesh m, sm;
+        meshFromData(&objData[0], &m);
+        meshFromData(&objData[1], &sm);
 
-        // NOTE: we are copying the objects in to the scene.
-        listAdd(scene.gameobjects, boatObject);
-        listAdd(scene.gameobjects, smoothBoateObject);
+        u32 bindex1 = sceneAddObject(&scene, &m);
+        u32 bindex2 = sceneAddObject(&scene, &sm);
+        boatObject = &scene.gameobjects[bindex1];
+        smoothBoateObject = &scene.gameobjects[bindex2];
+                
+        boatObject->transform.position = (vec3) { 20, 4, 0 };
+        smoothBoateObject->transform.position = (vec3) { 30, 0, 0 };
+
     }
     
     { // boat Rb
         boatRb = (Rigidbody) {
             .mass = 1.0f,
             //.rotational_velocity = (quat) { 0.0f, 0.0f, 0.0f, 1.0f },
-			.transform = &smoothBoateObject.transform
+			.transform = &smoothBoateObject->transform
+        };
+
+        boatRb2 = (Rigidbody) {
+            .mass = 1.0f,
+            .transform = &boatObject->transform
         };
         
         //quatFromAxisAngle(&(vec3) {0, 1, 0}, 0.01f, &boatRb.rotational_velocity);
@@ -711,13 +687,7 @@ int main() {
             app.deltatime = 0.016;
             
             applyPhysics(&boatRb);
-            
-            static Rigidbody rb = (Rigidbody) {
-                .mass = 1.0f,
-                .transform = &boatObject.transform
-            };
-
-            applyPhysics(&rb);
+            applyPhysics(&boatRb2);
         }
 
         // printf("deltatime: %f\n", app.deltatime);

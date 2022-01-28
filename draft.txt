@@ -21,11 +21,11 @@ get done now:
     - <done> load/save camera transform (and other basic properties)
     - <done> #line in shader
     - <done> Deferred pipeline
+    - <done> PBR
+    - <done> HDR tone-mapping & gamma-correction
 
     - shader noise algos
-    - HDR tone-mapping & gamma-correction
     - directional lights
-    - PBR
     - point lights
     - "hotreload" of terrain generation parameters, for rapid development
 
