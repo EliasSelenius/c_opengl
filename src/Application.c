@@ -141,7 +141,9 @@ static void initUBO(Ublock** ubo, char* name, u32 size) {
 }
 
 static void opengl_debug_callback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* message, const void* userParam) {
-    // printf("opengl error:\n\t %s\n\n", message);
+    if (type == GL_DEBUG_TYPE_ERROR) {
+        printf("opengl error:\n\t %s\n\n", message);
+    }
 }
 
 int appInit() {
@@ -164,7 +166,7 @@ int appInit() {
     glfwSetFramebufferSizeCallback(app.window, framebuffer_size_callback);
     glfwSetKeyCallback(app.window, key_callback);
     
-    // GL_DEBUG_OUTPUT_SYNCHRONOUS
+    // TODO: GL_DEBUG_OUTPUT_SYNCHRONOUS
     glEnable(GL_DEBUG_OUTPUT);
     glDebugMessageCallback(&opengl_debug_callback, NULL);
 
@@ -183,8 +185,12 @@ int appInit() {
     }
 
     { // light pass stuff
-        FramebufferFormat attachment = fbFormat_rgb16f;
-        app.hdrBuffer = framebufferCreate(app.width, app.height, 1, &attachment, fbDepth_None);
+        FramebufferFormat attachment = fbFormat_rgb16f;                             
+        app.hdrBuffer = framebufferCreate(app.width, app.height, 
+                                          1, &attachment, 
+                                          // giving depth to hdrBuffer for water and transparent objects
+                                          fbDepth_DepthComponent);
+
         app.dirlightShader = shaderLoad("dirlight.frag", "scq.vert", NULL);
         app.hdr2ldrShader = shaderLoad("hdr2ldr.frag", "scq.vert", NULL);
 
@@ -192,8 +198,8 @@ int appInit() {
     
     
     // load shaders:
-    // app.defShader = shaderLoad("def");
-    // app.waterShader = shaderLoad("water");
+    // app.defShader = shaderLoadByName("def");
+    app.waterShader = shaderLoadByName("water");
     // glUniform1ui(glGetUniformLocation(app.waterShader, "u_depthTexture"), 0);
     app.scqShader = shaderLoadByName("scq");
     // glUseProgram(app.defShader);
@@ -308,6 +314,12 @@ static void drawframe() {
         sceneRender(&scene);
     }
 
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, app.gBuffer->id);
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, app.hdrBuffer->id);
+    glBlitFramebuffer(0, 0, app.width, app.height,
+                      0, 0, app.width, app.height,
+                      GL_DEPTH_BUFFER_BIT, GL_NEAREST);
+
     { // light pass
         glBindFramebuffer(GL_FRAMEBUFFER, app.hdrBuffer->id);
         glClear(GL_COLOR_BUFFER_BIT);
@@ -321,25 +333,42 @@ static void drawframe() {
         glUseProgram(app.dirlightShader);
 
         // bind gBuffer for reading
-         
         for (u32 i = 0; i < app.gBuffer->attachmentCount; i++) {
             glActiveTexture(GL_TEXTURE0 + i);
             glBindTexture(GL_TEXTURE_2D, app.gBuffer->attachments[i].texture);
         } 
         
 
-        // glActiveTexture(GL_TEXTURE0);
-        // glBindTexture(GL_TEXTURE_2D, app.gBuffer->attachments[0].texture);
-
         glDrawArrays(GL_TRIANGLES, 0, 6); // draw screen covering quad
     }
 
-    { // draw to screen
+    { // water
+        glUseProgram(app.waterShader);
+
+        glEnable(GL_DEPTH_TEST);
+
+        // alpha blending
+        glEnable(GL_BLEND);
+        glBlendEquation(GL_FUNC_ADD);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+        // draw
+        planeObject.transform.position.x = round(g_Camera.transform.position.x);
+        planeObject.transform.position.z = round(g_Camera.transform.position.z);
+        gameobjectRender(&planeObject);
+    }
+
+    { // draw to screen (hdr -> ldr)
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, app.hdrBuffer->attachments[0].texture);
+        
         glUseProgram(app.hdr2ldrShader);
+        
         glDisable(GL_DEPTH_TEST);
+        glDisable(GL_BLEND);
+        
         glDrawArrays(GL_TRIANGLES, 0, 6);
     }
 

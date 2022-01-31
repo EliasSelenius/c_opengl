@@ -23,7 +23,9 @@ get done now:
     - <done> Deferred pipeline
     - <done> PBR
     - <done> HDR tone-mapping & gamma-correction
+    - <done> reimplement water rendering
 
+    - materials
     - shader noise algos
     - directional lights
     - point lights
