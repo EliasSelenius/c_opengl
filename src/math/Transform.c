@@ -38,3 +38,31 @@ void transformRotateAxisAngle(Transform* transform, vec3 axis, f32 angle) {
     quatFromAxisAngle(&axis, angle, &q);
     transformRotate(transform, q);
 }
+
+void transformLookAt(Transform* transform, vec3 point, vec3 up) {
+
+    mat4 newRot = (mat4) {
+        // side vec
+        0, 0, 0, 0,
+        // up vec
+        0, 0, 0, 0,
+        // forward vec
+        point.x, point.y, point.z, 0,
+
+        0, 0, 0, 0
+    };
+
+    // construct forward vector
+    vec3Sub(&newRot.row3.xyz, transform->position);
+    vec3Normalize(&newRot.row3.xyz);
+    
+    // construct side vector
+    vec3Cross(&up, &newRot.row3.xyz, &newRot.row1.xyz);
+    vec3Normalize(&newRot.row1.xyz);
+
+    // construct up vector
+    vec3Cross(&newRot.row3.xyz, &newRot.row1.xyz, &newRot.row2.xyz);
+    vec3Normalize(&newRot.row2.xyz);
+    
+    quatFromMatrix(&newRot, &transform->rotation);
+}

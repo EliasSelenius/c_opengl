@@ -26,6 +26,8 @@ get done now:
     - <done> reimplement water rendering
 
     - materials
+    - boat camera controller
+    - boat controller
     - shader noise algos
     - directional lights
     - point lights
@@ -33,7 +35,12 @@ get done now:
 
 
 
-
+"essh-string.h"
+"essh-str.h"
+"essh-graphics.h"
+"essh-json.h"
+"essh-xml.h"
+"essh-types.h"
 
 
 

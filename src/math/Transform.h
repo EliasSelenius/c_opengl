@@ -14,3 +14,5 @@ void transformToMatrix(Transform* transform, mat4* out_result);
 void transformTranslate(Transform* transform, vec3 translation);
 void transformRotate(Transform* transform, quat rotation);
 void transformRotateAxisAngle(Transform* transform, vec3 axis, f32 angle);
+
+void transformLookAt(Transform* transform, vec3 point, vec3 up);

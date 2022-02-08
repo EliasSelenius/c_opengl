@@ -12,6 +12,7 @@
 #include "math/matrix.h"
 #include "math/vec.h"
 #include "math/quat.h"
+#include "math/general.h"
 
 #include "graphics/Mesh.h"
 #include "graphics/UBO.h"
@@ -30,13 +31,14 @@
 
 Application app;
 Camera g_Camera;
-f64 mouse_x, mouse_y, pmouse_x, pmouse_y, dmouse_x, dmouse_y;
+f64 mouse_x, mouse_y, pmouse_x, pmouse_y, dmouse_x, dmouse_y, mouse_scroll;
 vec2 wasd;
 
 Rigidbody boatRb, boatRb2;
 Gameobject planeObject, triangleObject, pyramidObject;
 Gameobject* boatObject;
 Gameobject* smoothBoateObject;
+Gameobject* player_boat;
 Scene scene;
 
 
@@ -54,6 +56,10 @@ static void bufferViewportSizeToUBO(f32 res[2]) {
 void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
     printf("resize: %d * %d\n", width, height);
     
+    if (width < 1 || height < 1) {
+        return;
+    }
+
     app.width = width;
     app.height = height;
     
@@ -63,6 +69,11 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
     framebufferResize(app.hdrBuffer, width, height);
 
     bufferViewportSizeToUBO((f32[2]){width, height});
+}
+
+void scroll_callback(GLFWwindow* window, f64 xoffset, f64 yoffset) {
+    printf("%f, %f\n", xoffset, yoffset);
+    mouse_scroll = yoffset;
 }
 
 static GLFWmonitor* getIdealMonitor() {
@@ -165,7 +176,8 @@ int appInit() {
     
     glfwSetFramebufferSizeCallback(app.window, framebuffer_size_callback);
     glfwSetKeyCallback(app.window, key_callback);
-    
+    glfwSetScrollCallback(app.window, scroll_callback);
+
     // TODO: GL_DEBUG_OUTPUT_SYNCHRONOUS
     glEnable(GL_DEBUG_OUTPUT);
     glDebugMessageCallback(&opengl_debug_callback, NULL);
@@ -264,6 +276,27 @@ void appExit() {
     glfwSetWindowShouldClose(app.window, 1);
 }
 
+static void cameraBoatControll() {
+    static f32 xAngle = 0.0f;
+    static f32 yOffset = 10.0f;
+    static f32 zoom = 10.0;
+
+    glfwSetInputMode(app.window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+
+
+    g_Camera.transform.position = player_boat->transform.position;
+    g_Camera.transform.position.y += yOffset;
+
+
+    xAngle -= dmouse_x / 200.0f;
+    yOffset = clamp(-5, 15, yOffset + dmouse_y / 10.0f);
+    zoom += mouse_scroll;
+
+    g_Camera.transform.position.x += sin(xAngle) * zoom;
+    g_Camera.transform.position.z += cos(xAngle) * zoom;
+    transformLookAt(&g_Camera.transform, player_boat->transform.position, (vec3) {0, 1, 0});
+}
+
 static void cameraFlyControll() {
     mat4 cam_model;
     transformToMatrix(&g_Camera.transform, &cam_model);
@@ -293,12 +326,27 @@ static void cameraFlyControll() {
     
 }
 
+typedef enum CameraMode {
+    CAM_FREE,
+    CAM_BOAT
+} CameraMode;
+
 static void drawframe() {
     glClearColor(0,0,0, 1);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     
-    
-    cameraFlyControll();
+    static b8 camMode = true;
+
+    u32 state = glfwGetKey(app.window, GLFW_KEY_F1);
+    if (state) {
+        camMode = !camMode;
+    }
+
+    switch (camMode) {
+        case true: cameraFlyControll(); break;
+        case false: cameraBoatControll(); break;
+    }
+
     cameraUse(&g_Camera);
 
 
@@ -441,7 +489,7 @@ static void updateInput() {
     dmouse_x = mouse_x - pmouse_x;
     dmouse_y = mouse_y - pmouse_y;
     //printf("Mouse: %f, %f  delta: %f, %f\n", mouse_x, mouse_y, dmouse_x, dmouse_y);
-    
+
     
     wasd = (vec2) { 0, 0 };
     if (glfwGetKey(app.window, GLFW_KEY_W)) wasd.y += 1;
@@ -493,67 +541,9 @@ void applyPhysics(Rigidbody* rb) {
     rbUpdate(rb);
 }
 
-#include "math/general.h"
 
 int main() {
 
-    if (false) { // test math funcs
-        printf("lerp: 3, 6 = %f\n", lerp(3, 6, 0.5f));
-
-        printf("fract = %f\n", fract(4.512f));
-    }
-
-
-    if (false) { // test shader includes
-        StringBuilder sb;
-        sbInit(&sb);
-
-        shaderLoadSource(&sb, "def.frag");
-
-        printf("%s", sb.content);
-    }
-
-
-    if (false) { // test string view
-        Strview sv = svFrom("  \t\t Hello There!   \n");
-        sv = svTrim(sv);
-
-        printf("Start with: %d\n", svStartsWith(svFrom("Hello dwajdoaw"), "Hello d"));
-
-        char str[256];
-        svCopyTo(sv, str);
-
-        str[sv.length] = '\0';
-        printf("TEST: |%s|\n", str);
-    }
-
-    if (false) { // test stringBuilder
-        StringBuilder sb;
-        sbInit(&sb);
-        sbAppendView(&sb, svFrom("Hello"));
-        sbAppend(&sb, " ");
-        sbAppendView(&sb, svTrim(svFrom("\nWorld   ")));
-        sbAppendView(&sb, svFrom("!"));
-        sbAppend(&sb, "\n");
-        sbAppendView(&sb, svFrom("Cool"));
-        sbAppendView(&sb, svFrom(" "));
-        sbAppend(&sb, "String Builder");
-        sbAppendView(&sb, svFrom(" dude!"));
-
-        char buffer[256] = {};
-        sbCopyIntoBuffer(&sb, buffer, 256);
-        //buffer[5] = '\0';
-        printf("Buffer Content:\n%s\n", buffer);
-
-        printf("Builder:\n    Capacity: %d\n    Length: %d\n    Content:\n%s\n", sb.capacity, sb.length, sb.content);
-
-        sbDestroy(&sb);
-    }
-
-    // return 0;
-    
-    
-    
     if (!appInit()) return -1;
     
 
@@ -646,7 +636,8 @@ int main() {
         u32 bindex2 = sceneAddObject(&scene, &sm);
         boatObject = &scene.gameobjects[bindex1];
         smoothBoateObject = &scene.gameobjects[bindex2];
-                
+        player_boat = smoothBoateObject;
+
         boatObject->transform.position = (vec3) { 20, 4, 0 };
         smoothBoateObject->transform.position = (vec3) { 30, 0, 0 };
 
@@ -705,10 +696,12 @@ int main() {
         glBindBuffer(GL_ARRAY_BUFFER, app.appUBO->bufferId);
         glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(time), &time);
         glBindBuffer(GL_ARRAY_BUFFER, 0);
-        
+
 
         updateInput();
         drawframe();
+
+        mouse_scroll = 0.0f;
 
         acTime += app.deltatime;
         if (acTime > 0.016) {

@@ -51,7 +51,7 @@ void _listAdd(void** list, void* value) {
 
 }
 
-void listRemove(void* list, void* value) {
+void listRemoveValue(void* list, void* value) {
 
 }
 

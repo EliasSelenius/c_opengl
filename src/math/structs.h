@@ -33,6 +33,7 @@ typedef union quat {
 
 
 typedef union mat4 {
+    // NOTE: m[row][col]
     f32 m[4][4];
     struct {
         vec4 row1, row2, row3, row4;

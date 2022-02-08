@@ -33,10 +33,13 @@ void _listAdd(void** list, void* value);
     _listAdd((void**)&list, &__unique_var_name_to_not_fuck_things_up); \
 }
 
+i32 listIndexOf(void* list, void* value);
+void listRemoveIndex(void* list, u32 index);
+void listRemoveValue(void* list, void* value);
 
-void listRemove(void* list, void* value);
 
 void listClear(void* list);
+
 
 u32 listLength(void* list);
 u32 listCapacity(void* list);

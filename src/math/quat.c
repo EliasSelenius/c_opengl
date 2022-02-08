@@ -126,7 +126,37 @@ void quatToAxisAngle(quat* q, f32* out_angle, vec3* out_axis) {
     else *out_axis = (vec3) { q->x / _sin, q->y / _sin, q->z / _sin };
 }
 
-void quatFromMatrix(mat4* m, quat* out_result);
+void quatFromMatrix(mat4* m, quat* out_result) {
+    float trace = m->m[0][0] + m->m[1][1] + m->m[2][2];
+    if (trace > 0) {
+        float s = 0.5f / sqrtf(trace+ 1.0f);
+        out_result->w = 0.25f / s;
+        out_result->x = ( m->m[2][1] - m->m[1][2] ) * s;
+        out_result->y = ( m->m[0][2] - m->m[2][0] ) * s;
+        out_result->z = ( m->m[1][0] - m->m[0][1] ) * s;
+    } else {
+        if ( m->m[0][0] > m->m[1][1] && m->m[0][0] > m->m[2][2] ) {
+            float s = 2.0f * sqrtf( 1.0f + m->m[0][0] - m->m[1][1] - m->m[2][2]);
+            out_result->w = (m->m[2][1] - m->m[1][2] ) / s;
+            out_result->x = 0.25f * s;
+            out_result->y = (m->m[0][1] + m->m[1][0] ) / s;
+            out_result->z = (m->m[0][2] + m->m[2][0] ) / s;
+        } else if (m->m[1][1] > m->m[2][2]) {
+            float s = 2.0f * sqrtf( 1.0f + m->m[1][1] - m->m[0][0] - m->m[2][2]);
+            out_result->w = (m->m[0][2] - m->m[2][0] ) / s;
+            out_result->x = (m->m[0][1] + m->m[1][0] ) / s;
+            out_result->y = 0.25f * s;
+            out_result->z = (m->m[1][2] + m->m[2][1] ) / s;
+        } else {
+            float s = 2.0f * sqrtf( 1.0f + m->m[2][2] - m->m[0][0] - m->m[1][1] );
+            out_result->w = (m->m[1][0] - m->m[0][1] ) / s;
+            out_result->x = (m->m[0][2] + m->m[2][0] ) / s;
+            out_result->y = (m->m[1][2] + m->m[2][1] ) / s;
+            out_result->z = 0.25f * s;
+        }
+    }
+}
+
 void quatToMatrix(quat* q, mat4* out_result) {
     f32 xx = q->x * q->x,
         xy = q->x * q->y,
