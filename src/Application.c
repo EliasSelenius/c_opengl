@@ -30,7 +30,10 @@
 
 
 Application app;
+
 Camera g_Camera;
+b8 camMode = true;
+
 f64 mouse_x, mouse_y, pmouse_x, pmouse_y, dmouse_x, dmouse_y, mouse_scroll;
 vec2 wasd;
 
@@ -40,6 +43,7 @@ Gameobject* boatObject;
 Gameobject* smoothBoateObject;
 Gameobject* player_boat;
 Scene scene;
+
 
 
 f32 waterHeight(f32 x, f32 y) {
@@ -72,7 +76,7 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
 }
 
 void scroll_callback(GLFWwindow* window, f64 xoffset, f64 yoffset) {
-    printf("%f, %f\n", xoffset, yoffset);
+    // printf("%f, %f\n", xoffset, yoffset);
     mouse_scroll = yoffset;
 }
 
@@ -139,6 +143,8 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
             appToggleFullscreen();
         } else if (key == GLFW_KEY_ESCAPE) {
             appExit();
+        } else if (key == GLFW_KEY_F1) {
+            camMode = !camMode;
         }
     }
 
@@ -155,6 +161,65 @@ static void opengl_debug_callback(GLenum source, GLenum type, GLuint id, GLenum 
     if (type == GL_DEBUG_TYPE_ERROR) {
         printf("opengl error:\n\t %s\n\n", message);
     }
+}
+
+static u32 skyboxVAO;
+static void setupSkybox() {
+    vec3* vertices = (vec3[]) {
+        { -1, -1, -1 },
+        {  1, -1, -1 },
+        { -1,  1, -1 },
+        {  1,  1, -1 },
+        { -1, -1,  1 },
+        {  1, -1,  1 },
+        { -1,  1,  1 },
+        {  1,  1,  1 },
+    };
+
+    u32* indices = (u32[]) {
+        0, 1, 2,
+        2, 1, 3,
+
+        1, 5, 7,
+        1, 7, 3,
+
+        0, 5, 1,
+        0, 4, 5, 
+
+        0, 2, 4,
+        2, 6, 4,
+
+        2, 3, 7,
+        7, 6, 2,
+
+        6, 5, 4,
+        7, 5, 6,
+    };
+
+    u32 vao, vbo, ebo;
+    vbo = bufferCreate(vertices, sizeof(vec3) * 8);
+    ebo = bufferCreate(indices, sizeof(u32) * 2 * 3 * 6);
+
+    glGenVertexArrays(1, &vao);
+    glBindVertexArray(vao);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
+
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, false, sizeof(vec3), NULL);
+
+    glBindVertexArray(0);
+
+    skyboxVAO = vao;
+}
+
+static void drawSkybox() {
+
+    glUseProgram(app.skyboxShader);
+
+    glBindVertexArray(skyboxVAO);
+    glDrawElements(GL_TRIANGLES, 2 * 3 * 6, GL_UNSIGNED_INT, 0);
+    glBindVertexArray(0);
 }
 
 int appInit() {
@@ -210,12 +275,12 @@ int appInit() {
     
     
     // load shaders:
-    // app.defShader = shaderLoadByName("def");
     app.waterShader = shaderLoadByName("water");
     // glUniform1ui(glGetUniformLocation(app.waterShader, "u_depthTexture"), 0);
     app.scqShader = shaderLoadByName("scq");
     // glUseProgram(app.defShader);
-    
+    app.skyboxShader = shaderLoadByName("skybox");
+
     FramebufferFormat attachments[] = {
         fbFormat_rgba8,
         fbFormat_float16
@@ -234,10 +299,13 @@ int appInit() {
     
     //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     glEnable(GL_DEPTH_TEST);
+    glDepthFunc(GL_LEQUAL);
     glEnable(GL_CULL_FACE);
     
     // TODO look up glMultiDrawElements()
-    
+
+    setupSkybox();
+
     
     sceneInit(&scene);
     
@@ -246,11 +314,12 @@ int appInit() {
     cameraUse(&g_Camera);
     
     { // load properties
-        FILE* file = fopen("src/storage.txt", "r");
-
-        if (file == NULL) {
+        FILE* file;
+        if (fopen_s(&file, "src/storage.txt", "r")) {
             printf("could not read storage.txt\n");
+
         } else {
+            
             char line[256];
             fgets(line, sizeof(line), file);
 
@@ -276,6 +345,7 @@ void appExit() {
     glfwSetWindowShouldClose(app.window, 1);
 }
 
+
 static void cameraBoatControll() {
     static f32 xAngle = 0.0f;
     static f32 yOffset = 10.0f;
@@ -298,6 +368,9 @@ static void cameraBoatControll() {
 }
 
 static void cameraFlyControll() {
+    
+    glfwSetInputMode(app.window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+    
     mat4 cam_model;
     transformToMatrix(&g_Camera.transform, &cam_model);
     
@@ -335,12 +408,6 @@ static void drawframe() {
     glClearColor(0,0,0, 1);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     
-    static b8 camMode = true;
-
-    u32 state = glfwGetKey(app.window, GLFW_KEY_F1);
-    if (state) {
-        camMode = !camMode;
-    }
 
     switch (camMode) {
         case true: cameraFlyControll(); break;
@@ -372,6 +439,8 @@ static void drawframe() {
         glBindFramebuffer(GL_FRAMEBUFFER, app.hdrBuffer->id);
         glClear(GL_COLOR_BUFFER_BIT);
 
+        drawSkybox();
+
         glDisable(GL_DEPTH_TEST);
         
         glEnable(GL_BLEND);
@@ -386,8 +455,8 @@ static void drawframe() {
             glBindTexture(GL_TEXTURE_2D, app.gBuffer->attachments[i].texture);
         } 
         
-
         glDrawArrays(GL_TRIANGLES, 0, 6); // draw screen covering quad
+
     }
 
     { // water
@@ -721,9 +790,8 @@ int main() {
     //glfwGetWindowPos
     
     { // save properties
-        FILE* file = fopen("src/storage.txt", "w");
-
-        if (file == NULL) {
+        FILE* file;
+        if (fopen_s(&file, "src/storage.txt", "w")) {
             printf("Could not save to storage.txt");
         } else {
             fprintf(file, "%f %f %f %f %f %f %f",

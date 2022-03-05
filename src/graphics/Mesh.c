@@ -105,6 +105,14 @@ void meshFlipIndices(MeshData* mesh) {
 
 
 void genCube(MeshData* out_result) {
+    out_result->vertices = (vertex[]) {
+        {
+            .pos = { 1, 2, 3 }
+        },
+        {
+            .pos = { 1, 2, 3 }
+        }
+    };
 }
 
 /*

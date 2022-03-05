@@ -25,6 +25,7 @@ get done now:
     - <done> HDR tone-mapping & gamma-correction
     - <done> reimplement water rendering
 
+    - skybox
     - materials
     - boat camera controller
     - boat controller
