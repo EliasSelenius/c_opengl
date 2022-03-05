@@ -142,11 +142,11 @@ void objToMesh(OBJ* obj, u32 normal_threshold_angle, MeshData* out_data) {
 
 
 void objLoad(const char* filename, OBJ* out_obj) {
-    FILE* file = fopen(filename, "r");
+    FILE* file;
 
-    if (file == NULL) {
+    if (fopen_s(&file, filename, "r")) {
         printf("Could not read file: %s\n", filename);
-        perror("objLoad() error");
+        return;
     }
 
     out_obj->positions = listCreate(vec3);

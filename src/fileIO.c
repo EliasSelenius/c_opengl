@@ -15,22 +15,18 @@ b8 fileExists(const char* filename) {
 
 
 char* fileread(const char* filename, u32* strLength) {
-    FILE* file = fopen(filename, "r");
-
-    if (file == NULL) {
+    FILE* file;
+    if (fopen_s(&file, filename, "r")) {
         printf("Could not read file: %s\n", filename);
-        perror("fileread() error");
+        return NULL;
     }
 
     fseek(file, 0, SEEK_END);
     *strLength = ftell(file);
     rewind(file);
 
-
     char* res = calloc(*strLength + 1, sizeof(char));
     fread(res, 1, *strLength, file);
-
-    //printf("file:%s has length: %d, and strlen = %llu\n", filename, *strLength, strlen(res));
 
     fclose(file);
 

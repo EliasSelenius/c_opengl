@@ -1,5 +1,4 @@
 #include "shader.h"
-#include "UBO.h"
 #include "../fileIO.h"
 #include "../String.h"
 
@@ -8,6 +7,9 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+
+static Ublock ublocks[30];
+static u32 ublockCount = 0;
 
 
 static u32 makeShader(u32 program, GLenum type, const char* code, i32 codeLength) {
@@ -120,9 +122,8 @@ void shaderLoadSource(StringBuilder* sb, const char* filename) {
     strcpy_s(filepath, sizeof(filepath), "src/graphics/shaders/");
     strcat_s(filepath, sizeof(filepath), filename);
 
-    FILE* file = fopen(filepath, "r");
-    
-    if (!file) {
+    FILE* file;
+    if (fopen_s(&file, filepath, "r")) {
         printf("Failed to load shader: %s\n", filename);
         return;
     } 
@@ -207,4 +208,33 @@ u32 shaderLoadCompute(const char* name) {
     u32 p = shaderCreateCompute(sb.content);
     sbDestroy(&sb);
     return p;    
+}
+
+
+static Ublock* createNew(char* name) {
+    Ublock* ub = &(ublocks[ublockCount]);
+    ub->bindingPoint = ublockCount;
+
+    u32 len = strlen(name) + 1;
+    ub->name = calloc(len, sizeof(char));
+    strcpy_s(ub->name, len, name);
+    // strcpy(ub->name, name);
+
+    ublockCount++;
+
+    return ub;
+}
+
+Ublock* ublockGetByName(char* name) {
+    for (int i = 0; i < ublockCount; i++) {
+        Ublock* ub = &(ublocks[i]);
+        if (strcmp(ub->name, name) == 0) return ub;
+    }
+
+    return createNew(name);
+}
+
+void ublockBindBuffer(Ublock* ublock, u32 buffer) {
+    ublock->bufferId = buffer;
+    glBindBufferBase(GL_UNIFORM_BUFFER, ublock->bindingPoint, buffer);
 }

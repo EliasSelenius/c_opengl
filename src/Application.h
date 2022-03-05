@@ -1,8 +1,8 @@
 #pragma once
 
 #include <GL.h>
-#include "graphics/UBO.h"
 #include "graphics/Framebuffer.h"
+#include "graphics/shader.h"
 
 typedef struct Application {
     GLFWwindow* window;

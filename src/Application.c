@@ -15,7 +15,6 @@
 #include "math/general.h"
 
 #include "graphics/Mesh.h"
-#include "graphics/UBO.h"
 #include "graphics/shader.h"
 #include "graphics/glUtils.h"
 #include "graphics/Camera.h"
@@ -770,15 +769,25 @@ int main() {
         updateInput();
         drawframe();
 
+        
         mouse_scroll = 0.0f;
 
         acTime += app.deltatime;
         if (acTime > 0.016) {
             acTime -= 0.016;
             app.deltatime = 0.016;
-            
+
+
             applyPhysics(&boatRb);
             applyPhysics(&boatRb2);
+
+            if (wasd.y > 0) {
+                mat4 mat;
+                transformToMatrix(boatRb.transform, &mat);
+                rbAddForce(&boatRb, mat.row3.xyz);
+            }
+            vec3Add(&boatRb.angularVelocity, (vec3) { 0, -wasd.x * app.deltatime, 0 });
+            
         }
 
         // printf("deltatime: %f\n", app.deltatime);
