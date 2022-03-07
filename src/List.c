@@ -10,7 +10,7 @@ u32 listCapacity(void* list) { return ((u32*)list)[-2]; }
 u32 listStride(void* list)   { return ((u32*)list)[-1]; }
 
 
-void* _listCreate(u32 stride) {
+void* listCreateWithStride(u32 stride) {
     ListHead* head = malloc(
         sizeof(ListHead) +
         stride        // first element
@@ -29,7 +29,7 @@ void listDelete(void* list) {
     free(listHead(list));
 }
 
-void _listAdd(void** list, void* value) {
+void listAddInternal(void** list, void* value) {
     ListHead* head = listHead(*list);
 
     if (head->length == head->capacity) {

@@ -50,6 +50,14 @@ void vec3Cross(vec3* a, vec3* b, vec3* out_result) {
     };
 }
 
+vec3 cross(vec3 a, vec3 b) {
+    return (vec3){
+        a.y * b.z - a.z * b.y,
+        a.z * b.x - a.x * b.z,
+        a.x * b.y - a.y * b.x
+    };
+}
+
 f32 vec3Length(vec3 v) { return sqrt(v.x*v.x + v.y*v.y + v.z*v.z); }
 
 f32 vec4Dot(vec4* a, vec4* b) {

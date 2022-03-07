@@ -4,6 +4,7 @@
 #include "camera.glsl"
 #include "PBR.glsl"
 
+
 layout(binding = 0) uniform sampler2D gBuffer_Pos;
 uniform float u_depthVisibility = 10.0;
 
@@ -20,7 +21,7 @@ void main() {
     //if (length(frag.fragpos) > 25) discard; 
 
 
-    vec3 ld = normalize(vec3(1, 1, 1));
+    vec3 ld = normalize(vec3(1, 3, 1));
     ld = (camera.view * vec4(ld, 0.0)).xyz;
 
 
@@ -39,6 +40,9 @@ void main() {
         
         // float geometryDepth = texture(u_depthTexture, uv).x;
         float geometryDepth = length(texture(gBuffer_Pos, uv).xyz);
+        if (geometryDepth < 0.001) {
+            geometryDepth = 9999.0;
+        }
 
         float waterDepth = length(frag.fragpos);
 

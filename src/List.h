@@ -23,14 +23,14 @@ typedef struct {
 
 ListHead* listHead(void* list);
 
-void* _listCreate(u32 stride);
-#define listCreate(type) _listCreate(sizeof(type))
+void* listCreateWithStride(u32 stride);
+#define listCreate(type) listCreateWithStride(sizeof(type))
 void listDelete(void* list);
 
-void _listAdd(void** list, void* value); 
+void listAddInternal(void** list, void* value); 
 #define listAdd(list, value) {   \
-    typeof(value) __unique_var_name_to_not_fuck_things_up = value;     \
-    _listAdd((void**)&list, &__unique_var_name_to_not_fuck_things_up); \
+    typeof(value) unique_var_name_to_not_fuck_things_up = value;     \
+    listAddInternal((void**)&list, &unique_var_name_to_not_fuck_things_up); \
 }
 
 i32 listIndexOf(void* list, void* value);

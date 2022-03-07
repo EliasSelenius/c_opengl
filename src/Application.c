@@ -37,18 +37,153 @@ f64 mouse_x, mouse_y, pmouse_x, pmouse_y, dmouse_x, dmouse_y, mouse_scroll;
 vec2 wasd;
 
 Rigidbody boatRb, boatRb2;
-Gameobject planeObject, triangleObject, pyramidObject;
 Gameobject* boatObject;
 Gameobject* smoothBoateObject;
 Gameobject* player_boat;
 Scene scene;
 
-
+static Mesh g_waterPlane;
 
 f32 waterHeight(f32 x, f32 y) {
     f32 time = glfwGetTime();
     return sin((x - y) / 3.0 + time) * 0.5;
 }
+
+vec3 waterNormal(f32 x, f32 y) {
+    vec3 v1 = { 0, 0, 1 };
+    vec3 v2 = { 1, 0, 0 };
+    vec3 v3 = { 0, 0, -1 };
+    vec3 v4 = { -1, 0, 0 };
+
+    v1.y = waterHeight(v1.x + x, v1.z + y);
+    v1.y = waterHeight(v2.x + x, v2.z + y);
+    v1.y = waterHeight(v3.x + x, v3.z + y);
+    v1.y = waterHeight(v4.x + x, v4.z + y);
+
+    vec3 n1 = cross(v1, v2);
+    vec3 n2 = cross(v2, v3);
+    vec3 n3 = cross(v3, v4);
+    vec3 n4 = cross(v4, v1);
+
+    vec3 normal = n1;
+    vec3Add(&normal, n2);
+    vec3Add(&normal, n3);
+    vec3Add(&normal, n4);
+    vec3Normalize(&normal);
+
+    return normal;
+}
+
+
+
+
+typedef struct Ship {
+    // vec3 pos;
+    quat rot;
+
+    union {
+        mat4 modelMatrix;
+        struct {
+            vec4 right;
+            vec4 up;
+            vec4 forward;
+            vec4 pos;
+        };
+    };
+
+    vec3 vel;
+    vec3 angularVel;
+    float mass;
+
+} Ship;
+
+static void updateShip(Ship* ship) {
+    vec3 tempPos = ship->pos.xyz;
+    quatToMatrix(&ship->rot, &ship->modelMatrix);
+    
+    vec3 translation = ship->vel;
+    vec3Scale(&translation, app.deltatime);
+    vec3Add(&tempPos, translation);
+    ship->pos.xyz = tempPos;
+
+    /*{ // bouancy
+        static vec3 offsets[] = {
+            { 2.1f,  -0.2f, 13.0f },
+            { -2.1f, -0.2f, 13.0f },
+            { 2.1f,  -0.2f, -10.0f },
+            { -2.1f, -0.2f, -10.0f }
+        };
+                        
+        for (u32 i = 0; i < 4; i++) {
+            vec3 o = offsets[i];
+            mat4MulVec3(&o, &ship->modelMatrix);
+            f32 water = waterHeight(o.x, o.z);
+            if (o.y < water) {
+                //printf("%d is underwater\n", i);
+                f32 dist = water - o.y;
+                // rbAddForceAtLocation(rb, (vec3) { 0, dist * 2.5f * app.deltatime, 0 }, offsets[i]);	
+                vec3 force = (vec3) { 0, dist * 2.5f * app.deltatime, 0 };
+                vec3 offset = offsets[i];
+
+                rbAddForce(rb, force);
+                vec3Add(ship->vel, force);
+                { // make offset be local to rb rotation
+                
+                    mat4 m;
+                    transformToMatrix(rb->transform, &m);
+                
+                    offset = (vec3) {
+                        offset.x * m.row1.x   +   offset.y * m.row2.x   +   offset.z * m.row3.x,
+                        offset.x * m.row1.y   +   offset.y * m.row2.y   +   offset.z * m.row3.y,
+                        offset.x * m.row1.z   +   offset.y * m.row2.z   +   offset.z * m.row3.z
+                    };	
+                }
+
+
+                vec3 axis;
+                vec3Cross(&force, &offset, &axis);
+                // TODO: axis is angular acceleration, not torque?
+                rbAddTorque(rb, axis);
+            }
+        }    
+    }*/
+
+}
+
+
+static vec3* gizmoPointsBatch;
+static u32 gizmoPointsVBO;
+
+static void gizmoSetup() {
+    gizmoPointsBatch = listCreate(vec3);
+    glGenBuffers(1, &gizmoPointsVBO);
+
+    glEnable(GL_PROGRAM_POINT_SIZE);
+    // glPointSize(10);
+}
+
+static void gizmoDispatch() {
+    glBindBuffer(GL_ARRAY_BUFFER, gizmoPointsVBO);
+    u32 len = listLength(gizmoPointsBatch);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vec3) * len, gizmoPointsBatch, GL_STATIC_DRAW);
+    
+    glUseProgram(app.gizmoShader);
+
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, false, sizeof(vec3), 0);
+    glDrawArrays(GL_POINTS, 0, len);
+
+    listClear(gizmoPointsBatch);
+}
+
+void gizmoPoint(vec3 pos) {
+    listAdd(gizmoPointsBatch, pos);
+}
+
+void gizmoLine(vec3 start, vec3 end) {
+
+}
+
 
 static void bufferViewportSizeToUBO(f32 res[2]) {
     glBindBuffer(GL_ARRAY_BUFFER, app.appUBO->bufferId);
@@ -280,6 +415,9 @@ int appInit() {
     // glUseProgram(app.defShader);
     app.skyboxShader = shaderLoadByName("skybox");
 
+    app.gizmoShader = shaderLoadByName("gizmoPoint");
+    gizmoSetup();
+
     FramebufferFormat attachments[] = {
         fbFormat_rgba8,
         fbFormat_float16
@@ -469,9 +607,13 @@ static void drawframe() {
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
         // draw
-        planeObject.transform.position.x = round(g_Camera.transform.position.x);
-        planeObject.transform.position.z = round(g_Camera.transform.position.z);
-        gameobjectRender(&planeObject);
+        // planeObject.transform.position.x = round(g_Camera.transform.position.x);
+        // planeObject.transform.position.z = round(g_Camera.transform.position.z);
+        glUniform2f(glGetUniformLocation(app.waterShader, "u_worldPos"), 
+            round(g_Camera.transform.position.x),
+            round(g_Camera.transform.position.z));
+
+        meshRender(&g_waterPlane);
     }
 
     { // draw to screen (hdr -> ldr)
@@ -489,63 +631,7 @@ static void drawframe() {
     }
 
 
-    //  OLD  // 
-    /*
-
-    glBindFramebuffer(GL_FRAMEBUFFER, app.fbo->id);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    const f32 depth_clear = 99999.0;
-    glClearBufferfv(GL_COLOR, 1, &depth_clear);
-    
-    { // objektoj
-        glUseProgram(app.defShader);
-        glDisable(GL_BLEND);
-        
-        // triangle
-        transformRotateAxisAngle(&triangleObject.transform, (vec3){0,1,0}, 0.1f);
-        gameobjectRender(&triangleObject);
-        
-        transformRotateAxisAngle(&pyramidObject.transform, (vec3){0,1,0}, 0.02f);
-        gameobjectRender(&pyramidObject);
-        
-        gameobjectRender(&boatObject);
-        gameobjectRender(&smoothBoateObject);
-        
-        
-        sceneRender(&scene);
-    }
-    
-    i32 w, h;
-    glfwGetFramebufferSize(app.window, &w, &h);
-    
-    // copy depth buffer
-    glBindFramebuffer(GL_READ_FRAMEBUFFER, app.fbo->id);
-    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-    glBlitFramebuffer(0,0,w,h, 0,0,w,h, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
-    
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    
-    { // draw screen quad
-        glBindTexture(GL_TEXTURE_2D, app.fbo->attachments[0].texture);
-        glUseProgram(app.scqShader);
-        glDisable(GL_DEPTH_TEST);
-        glDrawArrays(GL_TRIANGLES, 0, 6);
-    }
-    
-    
-    { // water
-        glUseProgram(app.waterShader);
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, app.fbo->attachments[1].texture);
-        glEnable(GL_BLEND);
-        glEnable(GL_DEPTH_TEST);
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-        
-        planeObject.transform.position.x = round(g_Camera.transform.position.x);
-        planeObject.transform.position.z = round(g_Camera.transform.position.z);
-        gameobjectRender(&planeObject);
-    }
-    */    
+    gizmoDispatch();
 }
 
 
@@ -569,6 +655,7 @@ static void updateInput() {
     }
 }
 
+
 void boatBouancy(Rigidbody* rb) {
     static vec3 offsets[] = {
         { 2.1f,  -0.2f, 13.0f },
@@ -579,16 +666,36 @@ void boatBouancy(Rigidbody* rb) {
 
     mat4 m;
     transformToMatrix(rb->transform, &m);
-                    
+
+    float pdist[4] = {0};
+
     for (u32 i = 0; i < 4; i++) {
         vec3 o = offsets[i];
         mat4MulVec3(&o, &m);
-        f32 water = -3 + waterHeight(o.x, o.z);
+        
+
+        f32 water = waterHeight(o.x, o.z);
+        f32 dist = water - o.y;
+
+        { // gizmo
+            gizmoPoint(o);
+            vec3 w = o;
+            w.y += dist;
+            gizmoPoint(w);
+            
+            float vel = pdist[i] - dist;
+            w.y += vel;
+            gizmoPoint(w);
+        }
+
+
         if (o.y < water) {
             //printf("%d is underwater\n", i);
-            f32 dist = water - o.y;
-            rbAddForceAtLocation(rb, (vec3) { 0, dist * 2.5f * app.deltatime, 0 }, offsets[i]);	
+            vec3 force = (vec3) { 0, dist * 2.5f * app.deltatime, 0 };
+            rbAddForceAtLocation(rb, force, offsets[i]);	
         }
+
+        pdist[i] = dist;
     }    
 }
 
@@ -681,9 +788,8 @@ int main() {
         Mesh m;
         meshCreate(objData.vertexCount, objData.vertices, objData.indexCount, objData.indices, &m);
         
-        gameobjectInit(&m, &pyramidObject);
-        
-        pyramidObject.transform.position.y = 10;
+        sceneAddObject(&scene, &m);
+
     }
     
     { // boat
@@ -726,27 +832,13 @@ int main() {
         //quatFromAxisAngle(&(vec3) {0, 1, 0}, 0.01f, &boatRb.rotational_velocity);
     }
     
-    { // triangle
-        vertex data[] = {
-            {-1, -1, 0,   0,0,0,   1, 0, 0, 1},
-            {0, 1, 0,     0,0,0,   0, 1, 0, 1},
-            {1, -1, 0,    0,0,0,   0, 0, 1, 1}
-        };
-        u32 ind[] = { 0, 2, 1 };
-        Mesh mesh;
-        meshCreate(3, data, 3, ind, &mesh);
-        gameobjectInit(&mesh, &triangleObject);
-    }
-    
     { // water
-        // plane
-        Mesh plane;
         MeshData planeData;
         genPlane(&planeData, 1000);
-        meshCreate(planeData.vertexCount, planeData.vertices, planeData.indexCount, planeData.indices, &plane);
-        
-        gameobjectInit(&plane, &planeObject);
-        planeObject.transform.position = (vec3) {0, -3, -4};
+        meshFromData(&planeData, &g_waterPlane);
+
+        free(planeData.indices);
+        free(planeData.vertices);
     }
     
     
@@ -781,12 +873,18 @@ int main() {
             applyPhysics(&boatRb);
             applyPhysics(&boatRb2);
 
-            if (wasd.y > 0) {
-                mat4 mat;
-                transformToMatrix(boatRb.transform, &mat);
-                rbAddForce(&boatRb, mat.row3.xyz);
+
+            if (!camMode) {
+                if (wasd.y < 0) rbAddForce(&boatRb, (vec3) {0, 1, 0});
+                if (wasd.y > 0) {
+                    mat4 mat;
+                    transformToMatrix(boatRb.transform, &mat);
+                    vec3 force = mat.row3.xyz;
+                    vec3Scale(&force, app.deltatime * 20.0f);
+                    rbAddForce(&boatRb, force);
+                }
+                vec3Add(&boatRb.angularVelocity, (vec3) { 0, -wasd.x * app.deltatime, 0 });
             }
-            vec3Add(&boatRb.angularVelocity, (vec3) { 0, -wasd.x * app.deltatime, 0 });
             
         }
 

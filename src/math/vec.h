@@ -12,6 +12,7 @@ void vec3Scale(vec3* a, f32 scalar);
 f32 vec3Dot(vec3* a, vec3* b);
 void vec3Normalize(vec3* v);
 void vec3Cross(vec3* a, vec3* b, vec3* out_result);
+vec3 cross(vec3 a, vec3 b);
 f32 vec3Length(vec3 v);
 
 f32 vec4Dot(vec4* a, vec4* b);
