@@ -9,11 +9,9 @@ typedef struct Application {
     u32 width, height;
 
     u32 gizmoShader;
-
     u32 waterShader;
     u32 scqShader;
     u32 skyboxShader;
-
     u32 gPassShader;
     u32 dirlightShader;
     u32 pointlightShader;

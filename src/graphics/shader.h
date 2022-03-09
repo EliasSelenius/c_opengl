@@ -10,16 +10,24 @@ typedef struct Ublock {
     u32 bufferId;
 } Ublock;
 
+/*
+typedef struct ShaderProgram {
+    char* name;
+    u32 id;
+    time_t timeCreated;
 
-u32 shaderCreate(const char* vert, i32 vertLength, const char* frag, i32 fragLength, const char* geom, i32 geomLength);
+} ShaderProgram;
+*/
+
+
+
+u32 shaderCreate(const char* vert, const char* frag, const char* geom);
 u32 shaderCreateCompute(const char* src);
 
 u32 shaderLoadCompute(const char* name);
 u32 shaderLoadByName(const char* name);
 u32 shaderLoad(const char* frag_filename, const char* vert_filename, const char* geom_filename);
-
-void shaderLoadSource(StringBuilder* sb, const char* filename);
-
+void shaderReload(char* name, u32 program);
 
 Ublock* ublockGetByName(char* name);
 void ublockBindBuffer(Ublock* ublock, u32 buffer);

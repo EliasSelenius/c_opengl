@@ -8,13 +8,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+// TODO: make this a dynamic array
 static Ublock ublocks[30];
 static u32 ublockCount = 0;
 
 
-static u32 makeShader(u32 program, GLenum type, const char* code, i32 codeLength) {
+static u32 makeShader(u32 program, GLenum type, const char* code) {
     u32 s = glCreateShader(type);
-    glShaderSource(s, 1, &code, &codeLength); 
+    glShaderSource(s, 1, &code, NULL); // NULL assumes null-terminated string 
     glAttachShader(program, s);
     return s;
 }
@@ -54,28 +55,14 @@ static b8 checkStatus(u32 program) {
     return true;
 }
 
-// TODO: remove ugly length parameters
-u32 shaderCreate(const char* vert, i32 vertLength, 
-                 const char* frag, i32 fragLength,
-                 const char* geom, i32 geomLength) {
-    /*
-        create program
-        create shaders
-        compile
-        attach
-        link
-        detach
-        check for error
+static u32 linkProgram(u32 program, 
+                const char* vert, 
+                const char* frag,
+                const char* geom) {
 
-    */
-
-
-
-    u32 program = glCreateProgram();
-
-    u32 v = makeShader(program, GL_VERTEX_SHADER, vert, vertLength);
-    u32 f = makeShader(program, GL_FRAGMENT_SHADER, frag, fragLength);
-    u32 g = geom == NULL ? 0 : makeShader(program, GL_GEOMETRY_SHADER, geom, geomLength);
+    u32 v = makeShader(program, GL_VERTEX_SHADER, vert);
+    u32 f = makeShader(program, GL_FRAGMENT_SHADER, frag);
+    u32 g = geom == NULL ? 0 : makeShader(program, GL_GEOMETRY_SHADER, geom);
 
     glLinkProgram(program);
 
@@ -100,9 +87,28 @@ u32 shaderCreate(const char* vert, i32 vertLength,
     return program;
 }
 
+u32 shaderCreate(const char* vert, 
+                 const char* frag,
+                 const char* geom) {
+    /*
+        create program
+        create shaders
+        compile
+        attach
+        link
+        detach
+        check for error
+
+    */
+
+    u32 program = glCreateProgram();
+    return linkProgram(program, vert, frag, geom);
+}
+
+
 u32 shaderCreateCompute(const char* src) {
     u32 program = glCreateProgram();
-    u32 s = makeShader(program, GL_COMPUTE_SHADER, src, strlen(src));
+    u32 s = makeShader(program, GL_COMPUTE_SHADER, src);
 
     glLinkProgram(program);
     
@@ -116,7 +122,7 @@ u32 shaderCreateCompute(const char* src) {
     return program;
 }
 
-void shaderLoadSource(StringBuilder* sb, const char* filename) {
+static void shaderLoadSource(StringBuilder* sb, const char* filename) {
 
     char filepath[256];
     strcpy_s(filepath, sizeof(filepath), "src/graphics/shaders/");
@@ -189,9 +195,9 @@ u32 shaderLoad(const char* frag_filename, const char* vert_filename, const char*
     }
 
 
-    u32 shader = shaderCreate(vertSb.content, vertSb.length, 
-                              fragSb.content, fragSb.length, 
-                              geomSb.content, geomSb.length);
+    u32 shader = shaderCreate(vertSb.content, 
+                              fragSb.content, 
+                              geomSb.content);
 
     sbDestroy(&vertSb);
     sbDestroy(&fragSb);
@@ -210,6 +216,50 @@ u32 shaderLoadCompute(const char* name) {
     return p;    
 }
 
+
+void shaderReload(char* name, u32 program) {
+
+    // reconstruct file names
+    char vertFilename[256];
+    strcpy_s(vertFilename, sizeof(vertFilename), name);
+    strcat_s(vertFilename, sizeof(vertFilename), ".vert");
+
+    char fragFilename[256];
+    strcpy_s(fragFilename, sizeof(fragFilename), name);
+    strcat_s(fragFilename, sizeof(fragFilename), ".frag");
+
+    char geomFilename[256];
+    strcpy_s(geomFilename, sizeof(geomFilename), name);
+    strcat_s(geomFilename, sizeof(geomFilename), ".geom");
+
+    // load source code
+    StringBuilder vertSb; sbInit(&vertSb);
+    shaderLoadSource(&vertSb, vertFilename);
+
+    StringBuilder fragSb; sbInit(&fragSb);
+    shaderLoadSource(&fragSb, fragFilename);
+
+    b8 hasGeometryShader = fileExists(geomFilename);
+    StringBuilder geomSb;
+    geomSb.content = NULL;
+    geomSb.length = 0;
+    if (hasGeometryShader) {
+        sbInit(&geomSb);
+        shaderLoadSource(&geomSb, geomFilename);
+    }
+
+
+    linkProgram(program, vertSb.content, 
+                         fragSb.content, 
+                         geomSb.content);
+
+
+    sbDestroy(&vertSb);
+    sbDestroy(&fragSb);
+    if (hasGeometryShader) sbDestroy(&geomSb);
+
+
+}
 
 static Ublock* createNew(char* name) {
     Ublock* ub = &(ublocks[ublockCount]);
