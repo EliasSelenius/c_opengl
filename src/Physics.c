@@ -15,19 +15,6 @@ void rbAddForce(Rigidbody* rb, vec3 force) {
 void rbAddForceAtLocation(Rigidbody* rb, vec3 force, vec3 offset) {
     rbAddForce(rb, force);
 
-    
-	{ // make offset be local to rb rotation
-	
-		mat4 m;
-		transformToMatrix(rb->transform, &m);
-	
-		offset = (vec3) {
-			offset.x * m.row1.x   +   offset.y * m.row2.x   +   offset.z * m.row3.x,
-			offset.x * m.row1.y   +   offset.y * m.row2.y   +   offset.z * m.row3.y,
-			offset.x * m.row1.z   +   offset.y * m.row2.z   +   offset.z * m.row3.z
-		};	
-	}
-
 
     vec3 axis;
     vec3Cross(&force, &offset, &axis);
@@ -47,16 +34,16 @@ void rbAddTorque(Rigidbody* rb, vec3 axisAngle) {
     vec3Add(&rb->angularVelocity, axisAngle);    
 }
 
-void rbUpdate(Rigidbody* rb) {
+void rbUpdate(Rigidbody* rb, Transform* transform) {
     vec3 translation = rb->velocity;
     vec3Scale(&translation, app.deltatime);
-    vec3Add(&rb->transform->position, translation);
+    vec3Add(&transform->position, translation);
 	
 	
     vec3 axis = rb->angularVelocity;
     f32 len = vec3Length(axis);
     if (len > 0.0001) { // make sure the angularVelocity is not zero
         vec3Scale(&axis, 1.0f / len); // normalize axis
-        transformRotateAxisAngle(rb->transform, axis, len * app.deltatime);
+        transformRotateAxisAngle(transform, axis, len * app.deltatime);
     }
 }

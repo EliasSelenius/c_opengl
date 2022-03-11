@@ -3,7 +3,7 @@
 #include "quat.h"
 
 typedef struct Transform {
-    vec3 position, scale;
+    vec3 position;
     quat rotation;
 } Transform;
 

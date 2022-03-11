@@ -3,17 +3,12 @@
 
 void transformSetDefaults(Transform* transform) {
     transform->position = (vec3){ 0, 0, 0 };
-    transform->scale = (vec3){ 1, 1, 1 };
     quatSetIdentity(&transform->rotation);
 }
 
 void transformToMatrix(Transform* transform, mat4* out_result) {
 
     quatToMatrix(&transform->rotation, out_result);
-
-    // TODO: implement scale
-    
-    //out_result->row4.xyz = transform->position;
 
     out_result->row4.x = transform->position.x;
     out_result->row4.y = transform->position.y;

@@ -20,8 +20,6 @@
 #include "graphics/Camera.h"
 #include "graphics/obj.h"
 
-#include "Gameobject.h"
-#include "Scene.h"
 #include "Physics.h"
 
 #include <assert.h>
@@ -36,15 +34,8 @@ b8 camMode = true;
 f64 mouse_x, mouse_y, pmouse_x, pmouse_y, dmouse_x, dmouse_y, mouse_scroll;
 vec2 wasd;
 
-Rigidbody boatRb, boatRb2;
-Gameobject* boatObject;
-Gameobject* smoothBoateObject;
-Gameobject* player_boat;
-Scene scene;
-
 static Mesh g_waterPlane;
 
-#define PI 3.14159265359
 
 static vec3 gerstnerWave(vec2 coord, vec2 waveDir, float waveSteepness, float waveLength) {
     float k = 2.0 * PI / waveLength;
@@ -85,79 +76,6 @@ static f32 approximateWaveHeight(f32 xcoord, f32 ycoord) {
     return wave(samplePoint).y;
 }
 
-typedef struct Ship {
-    // vec3 pos;
-    quat rot;
-
-    union {
-        mat4 modelMatrix;
-        struct {
-            vec4 right;
-            vec4 up;
-            vec4 forward;
-            vec4 pos;
-        };
-    };
-
-    vec3 vel;
-    vec3 angularVel;
-    float mass;
-
-} Ship;
-
-static void updateShip(Ship* ship) {
-    vec3 tempPos = ship->pos.xyz;
-    quatToMatrix(&ship->rot, &ship->modelMatrix);
-    
-    vec3 translation = ship->vel;
-    vec3Scale(&translation, app.deltatime);
-    vec3Add(&tempPos, translation);
-    ship->pos.xyz = tempPos;
-
-    /*{ // bouancy
-        static vec3 offsets[] = {
-            { 2.1f,  -0.2f, 13.0f },
-            { -2.1f, -0.2f, 13.0f },
-            { 2.1f,  -0.2f, -10.0f },
-            { -2.1f, -0.2f, -10.0f }
-        };
-                        
-        for (u32 i = 0; i < 4; i++) {
-            vec3 o = offsets[i];
-            mat4MulVec3(&o, &ship->modelMatrix);
-            f32 water = waterHeight(o.x, o.z);
-            if (o.y < water) {
-                //printf("%d is underwater\n", i);
-                f32 dist = water - o.y;
-                // rbAddForceAtLocation(rb, (vec3) { 0, dist * 2.5f * app.deltatime, 0 }, offsets[i]);	
-                vec3 force = (vec3) { 0, dist * 2.5f * app.deltatime, 0 };
-                vec3 offset = offsets[i];
-
-                rbAddForce(rb, force);
-                vec3Add(ship->vel, force);
-                { // make offset be local to rb rotation
-                
-                    mat4 m;
-                    transformToMatrix(rb->transform, &m);
-                
-                    offset = (vec3) {
-                        offset.x * m.row1.x   +   offset.y * m.row2.x   +   offset.z * m.row3.x,
-                        offset.x * m.row1.y   +   offset.y * m.row2.y   +   offset.z * m.row3.y,
-                        offset.x * m.row1.z   +   offset.y * m.row2.z   +   offset.z * m.row3.z
-                    };	
-                }
-
-
-                vec3 axis;
-                vec3Cross(&force, &offset, &axis);
-                // TODO: axis is angular acceleration, not torque?
-                rbAddTorque(rb, axis);
-            }
-        }    
-    }*/
-
-}
-
 
 static vec3* gizmoPointsBatch;
 static u32 gizmoPointsVBO;
@@ -190,6 +108,102 @@ void gizmoPoint(vec3 pos) {
 
 void gizmoLine(vec3 start, vec3 end) {
 
+}
+
+
+
+/*
+typedef struct ShipType {
+
+} ShipType;
+*/
+
+typedef struct Ship {
+
+    Transform transform;
+    Rigidbody rb;
+    Mesh* mesh;
+
+    union {
+        mat4 modelMatrix;
+        struct {
+            vec4 right;
+            vec4 up;
+            vec4 forward;
+            vec4 pos;
+        };
+    };
+} Ship;
+
+static Ship* testShip;
+
+static void updateShip(Ship* ship) {
+
+    rbUpdate(&ship->rb, &ship->transform);
+    transformToMatrix(&ship->transform, &ship->modelMatrix);
+
+    // gravity
+    ship->rb.velocity.y -= 9.8f * app.deltatime;
+
+    // TODO: linear and angular dampning scaled by deltatime
+    // air friction
+    vec3Scale(&ship->rb.velocity, 0.95f);
+    // angular dampning
+    vec3Scale(&ship->rb.angularVelocity, 0.95f);
+
+    { // bouancy
+        // TODO: we don't need floating points for each side of the boat, boats are always symmetrical
+        static vec3 offsets[] = {
+            { 2.1f,  -0.2f, 13.0f },
+            { -2.1f, -0.2f, 13.0f },
+            { 2.1f,  -0.2f, -10.0f },
+            { -2.1f, -0.2f, -10.0f }
+        };
+                        
+        for (u32 i = 0; i < 4; i++) {
+            
+            vec3 o = offsets[i];
+            mat4MulVec3(&o, &ship->modelMatrix);
+            f32 water = approximateWaveHeight(o.x, o.z);
+            f32 dist = water - o.y;
+            
+            { // gizmo
+                gizmoPoint(o);
+                vec3 w = o;
+                w.y += dist;
+                gizmoPoint(w);                
+            }
+            
+            if (o.y < water) {
+
+                vec3 offset = offsets[i];
+                { // make offset be local to rb rotation
+                    mat4 m = ship->modelMatrix;
+                    offset = (vec3) {
+                        offset.x * m.row1.x   +   offset.y * m.row2.x   +   offset.z * m.row3.x,
+                        offset.x * m.row1.y   +   offset.y * m.row2.y   +   offset.z * m.row3.y,
+                        offset.x * m.row1.z   +   offset.y * m.row2.z   +   offset.z * m.row3.z
+                    };	
+                }
+
+                vec3 force = (vec3) { 0, dist * 2.5f * app.deltatime, 0 };
+                rbAddForceAtLocation(&ship->rb, force, offset);	
+            }
+        }    
+    }
+}
+
+static Ship* createShip(Mesh* mesh) {
+    Ship* ship = malloc(sizeof(*ship));
+
+    transformSetDefaults(&ship->transform);
+    ship->rb.mass = 1.0f;
+    ship->rb.angularVelocity = (vec3){0};
+    ship->rb.velocity = (vec3){0};
+
+    ship->mesh = mesh;
+
+    return ship;
 }
 
 
@@ -453,9 +467,7 @@ int appInit() {
 
     setupSkybox();
 
-    
-    sceneInit(&scene);
-    
+        
     // Camera
     cameraInit(&g_Camera, 3.14 / 2.0, 0.1, 1000.0);
     cameraUse(&g_Camera);
@@ -501,7 +513,7 @@ static void cameraBoatControll() {
     glfwSetInputMode(app.window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
 
-    g_Camera.transform.position = player_boat->transform.position;
+    g_Camera.transform.position = testShip->transform.position;
     g_Camera.transform.position.y += yOffset;
 
 
@@ -511,7 +523,7 @@ static void cameraBoatControll() {
 
     g_Camera.transform.position.x += sin(xAngle) * zoom;
     g_Camera.transform.position.z += cos(xAngle) * zoom;
-    transformLookAt(&g_Camera.transform, player_boat->transform.position, (vec3) {0, 1, 0});
+    transformLookAt(&g_Camera.transform, testShip->transform.position, (vec3) {0, 1, 0});
 }
 
 static void cameraFlyControll() {
@@ -573,7 +585,9 @@ static void drawframe() {
 
         glUseProgram(app.gPassShader);
 
-        sceneRender(&scene);
+
+        bufferInit(app.modelUBO->bufferId, &testShip->modelMatrix, sizeof(mat4));    
+        meshRender(testShip->mesh);
     }
 
     glBindFramebuffer(GL_READ_FRAMEBUFFER, app.gBuffer->id);
@@ -666,67 +680,6 @@ static void updateInput() {
 }
 
 
-void boatBouancy(Rigidbody* rb) {
-    static vec3 offsets[] = {
-        { 2.1f,  -0.2f, 13.0f },
-        { -2.1f, -0.2f, 13.0f },
-        { 2.1f,  -0.2f, -10.0f },
-        { -2.1f, -0.2f, -10.0f }
-    };
-
-    mat4 m;
-    transformToMatrix(rb->transform, &m);
-
-    float pdist[4] = {0};
-
-    for (u32 i = 0; i < 4; i++) {
-        vec3 o = offsets[i];
-        mat4MulVec3(&o, &m);
-        
-
-        f32 water = approximateWaveHeight(o.x, o.z);
-        f32 dist = water - o.y;
-
-        { // gizmo
-            gizmoPoint(o);
-            vec3 w = o;
-            w.y += dist;
-            gizmoPoint(w);
-            
-            float vel = pdist[i] - dist;
-            w.y += vel;
-            gizmoPoint(w);
-        }
-
-
-        if (o.y < water) {
-            //printf("%d is underwater\n", i);
-            vec3 force = (vec3) { 0, dist * 2.5f * app.deltatime, 0 };
-            rbAddForceAtLocation(rb, force, offsets[i]);	
-        }
-
-        pdist[i] = dist;
-    }    
-}
-
-void applyPhysics(Rigidbody* rb) {
-            
-    // gravity
-    rb->velocity.y -= 10 * app.deltatime;
-    
-    boatBouancy(rb);				
-    
-
-    // TODO: linear and angular dampning scaled by deltatime
-    // air friction
-    vec3Scale(&rb->velocity, 0.95f);
-    // angular dampning
-    vec3Scale(&rb->angularVelocity, 0.95f);
-
-    rbUpdate(rb);
-}
-
-
 int main() {
 
     if (!appInit()) return -1;
@@ -772,17 +725,6 @@ int main() {
         Mesh islandMesh;
         meshFromData(&planeData, &islandMesh);
 
-        Gameobject obj = {
-            .mesh = &islandMesh,
-            .parent = NULL,
-            .transform = {
-                .position = { -20, 0, 0 },
-                .rotation = { 0, 0, 0, 1 },
-                .scale = { 1, 1, 1 }
-            }
-        };
-
-        listAdd(scene.gameobjects, obj);
     }
 
     
@@ -798,7 +740,6 @@ int main() {
         Mesh m;
         meshCreate(objData.vertexCount, objData.vertices, objData.indexCount, objData.indices, &m);
         
-        sceneAddObject(&scene, &m);
 
     }
     
@@ -816,31 +757,11 @@ int main() {
         meshFromData(&objData[0], &m);
         meshFromData(&objData[1], &sm);
 
-        u32 bindex1 = sceneAddObject(&scene, &m);
-        u32 bindex2 = sceneAddObject(&scene, &sm);
-        boatObject = &scene.gameobjects[bindex1];
-        smoothBoateObject = &scene.gameobjects[bindex2];
-        player_boat = smoothBoateObject;
-
-        boatObject->transform.position = (vec3) { 20, 4, 0 };
-        smoothBoateObject->transform.position = (vec3) { 30, 0, 0 };
+        testShip = createShip(&sm);
+        testShip->transform.position = (vec3) { 20, 4, 0 };
 
     }
     
-    { // boat Rb
-        boatRb = (Rigidbody) {
-            .mass = 1.0f,
-            //.rotational_velocity = (quat) { 0.0f, 0.0f, 0.0f, 1.0f },
-			.transform = &smoothBoateObject->transform
-        };
-
-        boatRb2 = (Rigidbody) {
-            .mass = 1.0f,
-            .transform = &boatObject->transform
-        };
-        
-        //quatFromAxisAngle(&(vec3) {0, 1, 0}, 0.01f, &boatRb.rotational_velocity);
-    }
     
     { // water
         MeshData planeData;
@@ -853,6 +774,7 @@ int main() {
     
     
     static f64 acTime = 0.0;
+
 
     while (!glfwWindowShouldClose(app.window)) {
         
@@ -895,11 +817,10 @@ int main() {
             acTime -= 0.016;
             app.deltatime = 0.016;
 
-
-            applyPhysics(&boatRb);
-            applyPhysics(&boatRb2);
+            updateShip(testShip);
 
 
+/*
             if (!camMode) {
                 if (wasd.y < 0) rbAddForce(&boatRb, (vec3) {0, 1, 0});
                 if (wasd.y > 0) {
@@ -911,6 +832,7 @@ int main() {
                 }
                 vec3Add(&boatRb.angularVelocity, (vec3) { 0, -wasd.x * app.deltatime, 0 });
             }
+            */
             
         }
 

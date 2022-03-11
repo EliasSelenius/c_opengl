@@ -3,6 +3,9 @@
 #include "../types.h"
 #include <math.h>
 
+#define PI 3.14159265359
+
+
 inline f32 lerp(f32 x, f32 y, f32 t) {
     return x + (y - x) * t;
 }
