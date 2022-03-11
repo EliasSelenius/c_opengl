@@ -7,8 +7,9 @@
 
 uniform vec2 u_worldPos;
 
-uniform float u_waveLength = 6.0;
+uniform float u_waveLength = 10.0;
 uniform float u_waveSteepness = 0.5;
+uniform vec2  u_waveDirection = vec2(-1, 1);
 
 layout (location = 0) in vec3 a_Pos;
 layout (location = 1) in vec3 a_Normal;
@@ -20,47 +21,57 @@ out Fragdata {
     vec4 color;
 } v;
 
-float waveHeight(vec2 pos) {
-    return sin((pos.x - pos.y) / 3.0 + (Time)) * 0.5;
-    // return 0;
-}
 
-vec3 wavePoint(vec2 p) {
-    float k = 2.0 * PI / u_waveLength;
+vec3 gerstnerWave(vec2 coord, vec2 waveDir, float waveSteepness, float waveLength, inout vec3 tangent, inout vec3 binormal) {
+    float k = 2.0 * PI / waveLength;
     float c = sqrt(9.8 / k);
-    float f = k * (p.y - c * Time);
-    float a = u_waveSteepness / k;
-    vec3 res;
-    res.x = cos(f) * a;
-    res.y = sin(f) * a;
-    res.z = cos(f) * a;
-    return res;
+    vec2 d = normalize(waveDir);
+    float f = k * (dot(d, coord) - c * Time);
+    float a = waveSteepness / k;
+
+
+    tangent += vec3(
+        -d.x * d.x * waveSteepness * sin(f),
+        d.x * waveSteepness * cos(f),
+        -d.x * d.y * waveSteepness * sin(f)
+    );
+    binormal += vec3(
+        -d.x * d.y * waveSteepness * sin(f),
+        d.y * waveSteepness * cos(f),
+        -d.y * d.y * waveSteepness * sin(f)
+    );
+
+    return vec3(
+        d.x * cos(f) * a,
+              sin(f) * a,
+        d.y * cos(f) * a
+    );
 }
 
 void main() {
     // world pos
     vec4 wpos = vec4(a_Pos, 1);
     wpos.xz += u_worldPos;
-    //wpos.y += waveHeight(wpos.xz);
+
+    vec3 tangent = vec3(1, 0, 0);
+    vec3 binormal = vec3(0, 0, 1);
 
     vec2 coord = wpos.xz;
-    wpos.xyz += wavePoint(coord);
+    // TODO: visualize these wave properties with gizmos
+    wpos.xyz += gerstnerWave(coord, vec2(1, 1), 0.25, 60, tangent, binormal);
+    wpos.xyz += gerstnerWave(coord, vec2(1, 0.6), 0.25, 31, tangent, binormal);
+    wpos.xyz += gerstnerWave(coord, vec2(1, 1.3), 0.25, 18, tangent, binormal);
 
  
-    // world pos to view pos
+    // output
     v.fragpos = (camera.view * wpos).xyz;
-
+    v.normal = (camera.view * vec4(normalize(cross(binormal, tangent)), 0)).xyz;
     v.color = a_Color;
-
-    // calculate normal
-    // v.normal = (camera.view * vec4(0, 1, 0, 0)).xyz;
+    gl_Position = camera.projection * camera.view * wpos;
 
 
-    vec3 tangent = normalize(vec3(
-        0,
-        u_waveSteepness * cos(f),
-        1 - u_waveSteepness * sin(f)
-    ));
+    
+
 
 
     /* 
@@ -99,5 +110,4 @@ void main() {
 
 
 
-    gl_Position = camera.projection * camera.view * wpos;
 }

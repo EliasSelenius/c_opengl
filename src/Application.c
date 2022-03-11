@@ -44,38 +44,46 @@ Scene scene;
 
 static Mesh g_waterPlane;
 
-f32 waterHeight(f32 x, f32 y) {
-    f32 time = glfwGetTime();
-    return sin((x - y) / 3.0 + time) * 0.5;
+#define PI 3.14159265359
+
+static vec3 gerstnerWave(vec2 coord, vec2 waveDir, float waveSteepness, float waveLength) {
+    float k = 2.0 * PI / waveLength;
+    float c = sqrt(9.8 / k);
+    vec2 d = waveDir;
+    vec2Normalize(&d);
+    float f = k * (vec2Dot(d, coord) - c * app.time);
+    float a = waveSteepness / k;
+
+    return (vec3) {
+        d.x * cos(f) * a,
+              sin(f) * a,
+        d.y * cos(f) * a
+    };
+
 }
 
-vec3 waterNormal(f32 x, f32 y) {
-    vec3 v1 = { 0, 0, 1 };
-    vec3 v2 = { 1, 0, 0 };
-    vec3 v3 = { 0, 0, -1 };
-    vec3 v4 = { -1, 0, 0 };
-
-    v1.y = waterHeight(v1.x + x, v1.z + y);
-    v1.y = waterHeight(v2.x + x, v2.z + y);
-    v1.y = waterHeight(v3.x + x, v3.z + y);
-    v1.y = waterHeight(v4.x + x, v4.z + y);
-
-    vec3 n1 = cross(v1, v2);
-    vec3 n2 = cross(v2, v3);
-    vec3 n3 = cross(v3, v4);
-    vec3 n4 = cross(v4, v1);
-
-    vec3 normal = n1;
-    vec3Add(&normal, n2);
-    vec3Add(&normal, n3);
-    vec3Add(&normal, n4);
-    vec3Normalize(&normal);
-
-    return normal;
+static vec3 wave(vec2 coord) {
+    vec3 res = {0};
+    vec3Add(&res, gerstnerWave(coord, (vec2) {1, 1}, 0.25f, 60));
+    vec3Add(&res, gerstnerWave(coord, (vec2) {1, 0.6}, 0.25f, 31));
+    vec3Add(&res, gerstnerWave(coord, (vec2) {1, 1.3}, 0.25f, 18));
+    return res;
 }
 
+static f32 approximateWaveHeight(f32 xcoord, f32 ycoord) {
+    vec2 coord = {xcoord, ycoord};
+    vec2 samplePoint = coord;
+    vec3 point;
+    
+    for (u32 i = 0; i < 4; i++) {
+        point = wave(samplePoint);
+        samplePoint.x = coord.x - point.x;
+        samplePoint.y = coord.y - point.z;
+    }
+    
 
-
+    return wave(samplePoint).y;
+}
 
 typedef struct Ship {
     // vec3 pos;
@@ -676,7 +684,7 @@ void boatBouancy(Rigidbody* rb) {
         mat4MulVec3(&o, &m);
         
 
-        f32 water = waterHeight(o.x, o.z);
+        f32 water = approximateWaveHeight(o.x, o.z);
         f32 dist = water - o.y;
 
         { // gizmo
@@ -862,6 +870,22 @@ int main() {
 
         updateInput();
         drawframe();
+
+        {
+            for (u32 x = 0; x < 20; x++) {
+                for (u32 z = 0; z < 20; z++) {
+                    vec2 coord = {x, z};
+                    vec3 pos = wave(coord);
+                    pos.x += coord.x;
+                    pos.z += coord.y;
+                    gizmoPoint(pos);
+
+                    // f32 h = approximateWaveHeight(coord.x, coord.y);
+                    // gizmoPoint((vec3) {x, h, z});
+                
+                }
+            }
+        }
 
         
         mouse_scroll = 0.0f;
