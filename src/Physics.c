@@ -47,3 +47,14 @@ void rbUpdate(Rigidbody* rb, Transform* transform) {
         transformRotateAxisAngle(transform, axis, len * app.deltatime);
     }
 }
+
+// returns the shortest distance between a ray and a sphere. if it is less than 0, they intersect
+f32 raySphereDistance(vec3 spherePos, f32 sphereRadius, vec3 rayPos, vec3 rayDir) {
+
+    vec3 h = v3sub(spherePos, rayPos);
+    f32 al = v3dot(h, rayDir);
+    if (al <= 0) return 0; // ray points in different direction.
+
+    vec3 a = v3scale(rayDir, al);
+    return v3length(v3sub(v3add(rayPos, a), spherePos)) - sphereRadius;
+}

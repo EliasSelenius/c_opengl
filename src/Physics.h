@@ -19,3 +19,5 @@ void rbAddTorque(Rigidbody* rb, vec3 axisAngle);
 
 
 void rbUpdate(Rigidbody* rb, Transform* transform);
+
+f32 raySphereDistance(vec3 spherePos, f32 sphereRadius, vec3 rayPos, vec3 rayDir);
