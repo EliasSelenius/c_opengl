@@ -77,33 +77,59 @@ static f32 approximateWaveHeight(f32 xcoord, f32 ycoord) {
 }
 
 
-static vec3* gizmoPointsBatch;
+typedef struct GizmoPoint {
+    vec3 pos;
+    vec3 color;
+} GizmoPoint;
+
+static vec3 gizmoCurrentColor = {1, 1, 1};
+static GizmoPoint* gizmoPointsBatch;
 static u32 gizmoPointsVBO;
 
+static GizmoPoint* gizmoLinesBatch;
+
 static void gizmoSetup() {
-    gizmoPointsBatch = listCreate(vec3);
+    gizmoPointsBatch = listCreate(GizmoPoint);
     glGenBuffers(1, &gizmoPointsVBO);
 
     glEnable(GL_PROGRAM_POINT_SIZE);
     // glPointSize(10);
+
+    // glEnable(GL_LINE_SMOOTH);
+    // glLineWidth(10);
+
 }
 
 static void gizmoDispatch() {
     glBindBuffer(GL_ARRAY_BUFFER, gizmoPointsVBO);
     u32 len = listLength(gizmoPointsBatch);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vec3) * len, gizmoPointsBatch, GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(GizmoPoint) * len, gizmoPointsBatch, GL_STATIC_DRAW);
     
     glUseProgram(app.gizmoShader);
 
+    GizmoPoint* gp = 0;
+
     glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 3, GL_FLOAT, false, sizeof(vec3), 0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, false, sizeof(GizmoPoint), &gp->pos);
+    
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 3, GL_FLOAT, false, sizeof(GizmoPoint), &gp->color);
+    
     glDrawArrays(GL_POINTS, 0, len);
 
     listClear(gizmoPointsBatch);
 }
 
+void gizmoColor(f32 red, f32 green, f32 blue) {
+    gizmoCurrentColor = (vec3) {red, green, blue};
+}
+
 void gizmoPoint(vec3 pos) {
-    listAdd(gizmoPointsBatch, pos);
+    GizmoPoint gp = {
+        .pos = pos,
+        .color = gizmoCurrentColor
+    };
+    listAdd(gizmoPointsBatch, gp);
 }
 
 void gizmoLine(vec3 start, vec3 end) {
@@ -112,14 +138,19 @@ void gizmoLine(vec3 start, vec3 end) {
 
 
 
-/*
+
 typedef struct ShipType {
+    Mesh* mesh;
+
+    vec3* buoyantPoints;
+    u32 buoyantPointsLength;
 
 } ShipType;
-*/
+
 
 typedef struct Ship {
 
+    //ShipType* shipType;
     Transform transform;
     Rigidbody rb;
     Mesh* mesh;
@@ -147,20 +178,37 @@ static void updateShip(Ship* ship) {
 
     // TODO: linear and angular dampning scaled by deltatime
     // air friction
-    vec3Scale(&ship->rb.velocity, 0.95f);
+    //vec3Scale(&ship->rb.velocity, 0.95f);
     // angular dampning
-    vec3Scale(&ship->rb.angularVelocity, 0.95f);
+    //vec3Scale(&ship->rb.angularVelocity, 0.95f);
 
-    { // bouancy
+    {
+        vec3 friction = ship->rb.velocity;
+        friction.x = -friction.x;
+        friction.y = -friction.y;
+        friction.z = -friction.z;
+
+        vec3Scale(&friction, app.deltatime);
+
+        vec3Add(&ship->rb.velocity, friction);
+    }
+
+    { // buoyancy
         // TODO: we don't need floating points for each side of the boat, boats are always symmetrical
         static vec3 offsets[] = {
             { 2.1f,  -0.2f, 13.0f },
             { -2.1f, -0.2f, 13.0f },
+            
+            { 2.9f,  -0.2f, 0.0f },
+            { -2.9f,  -0.2f, 0.0f },
+
             { 2.1f,  -0.2f, -10.0f },
             { -2.1f, -0.2f, -10.0f }
         };
-                        
-        for (u32 i = 0; i < 4; i++) {
+
+        i32 offsetsCount = sizeof(offsets) / sizeof(*offsets);
+
+        for (u32 i = 0; i < offsetsCount; i++) {
             
             vec3 o = offsets[i];
             mat4MulVec3(&o, &ship->modelMatrix);
@@ -168,10 +216,15 @@ static void updateShip(Ship* ship) {
             f32 dist = water - o.y;
             
             { // gizmo
+
+                gizmoColor(0.8f, 0.8f, 0.8f);
                 gizmoPoint(o);
+                
+                
                 vec3 w = o;
                 w.y += dist;
-                gizmoPoint(w);                
+                gizmoColor(0, 0, 1);
+                gizmoPoint(w);
             }
             
             if (o.y < water) {
@@ -190,6 +243,19 @@ static void updateShip(Ship* ship) {
                 rbAddForceAtLocation(&ship->rb, force, offset);	
             }
         }    
+    }
+
+    { // angular dampning
+        const float dampning = 10.0f;
+
+        vec3 f = ship->rb.angularVelocity;
+        
+        float factor = clamp(0, 1, dampning * app.deltatime);
+        f.x = -f.x * factor;
+        f.y = -f.y * factor;
+        f.z = -f.z * factor;
+
+        vec3Add(&ship->rb.angularVelocity, f);
     }
 }
 
@@ -758,7 +824,7 @@ int main() {
         meshFromData(&objData[1], &sm);
 
         testShip = createShip(&sm);
-        testShip->transform.position = (vec3) { 20, 4, 0 };
+        testShip->transform.position = (vec3) { 40, 4, 0 };
 
     }
     
@@ -800,6 +866,9 @@ int main() {
                     vec3 pos = wave(coord);
                     pos.x += coord.x;
                     pos.z += coord.y;
+                    float r = random2(pos.x, pos.z);
+                    r = (r + 1.0f) / 2.0f;
+                    gizmoColor(r, r, r);
                     gizmoPoint(pos);
 
                     // f32 h = approximateWaveHeight(coord.x, coord.y);
@@ -814,25 +883,22 @@ int main() {
 
         acTime += app.deltatime;
         if (acTime > 0.016) {
-            acTime -= 0.016;
             app.deltatime = 0.016;
+            acTime -= 0.016;
 
             updateShip(testShip);
 
 
-/*
+            
             if (!camMode) {
-                if (wasd.y < 0) rbAddForce(&boatRb, (vec3) {0, 1, 0});
+                if (wasd.y < 0) rbAddForce(&testShip->rb, (vec3) {0, 1, 0});
                 if (wasd.y > 0) {
-                    mat4 mat;
-                    transformToMatrix(boatRb.transform, &mat);
-                    vec3 force = mat.row3.xyz;
+                    vec3 force = testShip->forward.xyz;
                     vec3Scale(&force, app.deltatime * 20.0f);
-                    rbAddForce(&boatRb, force);
+                    rbAddForce(&testShip->rb, force);
                 }
-                vec3Add(&boatRb.angularVelocity, (vec3) { 0, -wasd.x * app.deltatime, 0 });
+                vec3Add(&testShip->rb.angularVelocity, (vec3) { 0, -wasd.x * app.deltatime, 0 });
             }
-            */
             
         }
 
