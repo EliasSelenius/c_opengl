@@ -140,7 +140,7 @@ void gizmoLine(vec3 start, vec3 end) {
 
 
 typedef struct ShipType {
-    Mesh* mesh;
+    Mesh mesh;
 
     vec3* buoyantPoints;
     u32 buoyantPointsLength;
@@ -153,9 +153,10 @@ typedef struct Ship {
     //ShipType* shipType;
     Transform transform;
     Rigidbody rb;
-    Mesh* mesh;
+    Mesh mesh;
 
     union {
+        // NOTE: model matrix is always orthonormalized, as we only use position and rotation
         mat4 modelMatrix;
         struct {
             vec4 right;
@@ -167,6 +168,7 @@ typedef struct Ship {
 } Ship;
 
 static Ship* testShip;
+static Ship* g_Ships; // darray
 
 static void updateShip(Ship* ship) {
 
@@ -182,16 +184,7 @@ static void updateShip(Ship* ship) {
     // angular dampning
     //vec3Scale(&ship->rb.angularVelocity, 0.95f);
 
-    {
-        vec3 friction = ship->rb.velocity;
-        friction.x = -friction.x;
-        friction.y = -friction.y;
-        friction.z = -friction.z;
 
-        vec3Scale(&friction, app.deltatime);
-
-        vec3Add(&ship->rb.velocity, friction);
-    }
 
     { // buoyancy
         // TODO: we don't need floating points for each side of the boat, boats are always symmetrical
@@ -245,12 +238,23 @@ static void updateShip(Ship* ship) {
         }    
     }
 
+    { // dampning
+        const float dampning = 1.0f;
+
+        vec3 f = ship->rb.velocity;
+        f32 factor = clamp(0, 1, dampning * app.deltatime);
+        f.x = -f.x * factor;
+        f.y = -f.y * factor;
+        f.z = -f.z * factor;
+
+        vec3Add(&ship->rb.velocity, f);
+    }
+
     { // angular dampning
         const float dampning = 10.0f;
 
         vec3 f = ship->rb.angularVelocity;
-        
-        float factor = clamp(0, 1, dampning * app.deltatime);
+        f32 factor = clamp(0, 1, dampning * app.deltatime);
         f.x = -f.x * factor;
         f.y = -f.y * factor;
         f.z = -f.z * factor;
@@ -267,7 +271,7 @@ static Ship* createShip(Mesh* mesh) {
     ship->rb.angularVelocity = (vec3){0};
     ship->rb.velocity = (vec3){0};
 
-    ship->mesh = mesh;
+    ship->mesh = *mesh;
 
     return ship;
 }
@@ -445,6 +449,7 @@ static void drawSkybox() {
     glDrawElements(GL_TRIANGLES, 2 * 3 * 6, GL_UNSIGNED_INT, 0);
     glBindVertexArray(0);
 }
+
 
 int appInit() {
     
@@ -651,9 +656,28 @@ static void drawframe() {
 
         glUseProgram(app.gPassShader);
 
+        u32 shipCount = listLength(g_Ships);
+        for (u32 i = 0; i < shipCount; i++) {
+            bufferInit(app.modelUBO->bufferId, &g_Ships[i].modelMatrix, sizeof(mat4));
+            meshRender(&g_Ships[i].mesh);    
+        }
 
-        bufferInit(app.modelUBO->bufferId, &testShip->modelMatrix, sizeof(mat4));    
-        meshRender(testShip->mesh);
+        bufferInit(app.modelUBO->bufferId, &testShip->modelMatrix, sizeof(mat4));
+        meshRender(&testShip->mesh);
+
+
+        { // test reading from gbuffer
+            vec3 vpos;
+            glReadPixels(mouse_x, app.height - mouse_y, 1, 1, GL_RGB, GL_FLOAT, &vpos);
+
+            mat4 invView;
+            mat4Transpose(&g_Camera.view, &invView);
+            mat4MulVec3(&vpos, &invView);
+            vpos = v3add(vpos, g_Camera.transform.position);
+
+            gizmoColor(1, 0, 0);
+            gizmoPoint(vpos);
+        }
     }
 
     glBindFramebuffer(GL_READ_FRAMEBUFFER, app.gBuffer->id);
@@ -795,11 +819,11 @@ int main() {
 
     
     { // pyramid
-        OBJ obj;
+        OBJfile obj;
         objLoad("src/models/pyramid.obj", &obj);
         
         MeshData objData;
-        objToFlatShadedMesh(&obj, &objData);
+        objToFlatShadedMesh(&obj.objs[0], &objData);
         
         objFree(&obj);
         
@@ -810,22 +834,52 @@ int main() {
     }
     
     { // boat
-        OBJ objFile;
+        OBJfile objFile;
         objLoad("src/models/Boate.obj", &objFile);
-        
-        MeshData objData[2];
-        objToFlatShadedMesh(&objFile, &objData[0]);
-        objToSmoothShadedMesh(&objFile, &objData[1]);
+
+        MeshData data;
+        objToSmoothShadedMesh(&objFile.objs[2], &data);
         
         objFree(&objFile);
         
-        Mesh m, sm;
-        meshFromData(&objData[0], &m);
-        meshFromData(&objData[1], &sm);
+        Mesh mesh, sm;
+        meshFromData(&data, &mesh);
 
-        testShip = createShip(&sm);
+        free(data.vertices);
+        free(data.indices);
+
+        testShip = createShip(&mesh);
         testShip->transform.position = (vec3) { 40, 4, 0 };
 
+    }
+
+    { // load ships
+        g_Ships = listCreate(Ship);
+
+        OBJfile file;
+        objLoad("src/models/Ships.obj", &file);
+
+        u32 len = listLength(file.objs);
+        for (u32 i = 0; i < len; i++) {
+            MeshData data;
+            objToSmoothShadedMesh(&file.objs[i], &data);
+            
+            Ship ship = {0};
+            ship.rb.mass = 1;
+            meshFromData(&data, &ship.mesh);
+            transformSetDefaults(&ship.transform);
+            ship.transform.position = file.objs[i].pos;
+
+            transformToMatrix(&ship.transform, &ship.modelMatrix);
+
+            listAdd(g_Ships, ship);
+
+
+            free(data.vertices);
+            free(data.indices);
+        }
+
+        objFree(&file);
     }
     
     
@@ -888,7 +942,10 @@ int main() {
 
             updateShip(testShip);
 
-
+            u32 len = listLength(g_Ships);
+            for (u32 i = 0; i < len; i++) {
+                updateShip(&g_Ships[i]);
+            }
             
             if (!camMode) {
                 if (wasd.y < 0) rbAddForce(&testShip->rb, (vec3) {0, 1, 0});

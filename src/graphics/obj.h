@@ -11,13 +11,19 @@ typedef struct {
 } face;
 
 typedef struct OBJ {
+    char* name;
     vec3* positions;
     vec3* normals;
     face* faces;
+    vec3 pos;
 } OBJ;
 
-void objLoad(const char* filename, OBJ* out_obj);
-void objFree(OBJ* obj);
+typedef struct OBJfile {
+    OBJ* objs; // darray
+} OBJfile;
+
+void objLoad(const char* filename, OBJfile* objFile);
+void objFree(OBJfile* obj);
 
 void objToFlatShadedMesh(OBJ* obj, MeshData* out_data);
 void objToSmoothShadedMesh(OBJ* obj, MeshData* out_data);

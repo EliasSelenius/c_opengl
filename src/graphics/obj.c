@@ -7,10 +7,17 @@
 #include "../List.h"
 
 
-void objFree(OBJ* obj) {
-    listDelete(obj->positions);
-    listDelete(obj->normals);
-    listDelete(obj->faces);
+void objFree(OBJfile* obj) {
+    u32 len = listLength(obj->objs);
+
+    for (u32 i = 0; i < len; i++) {
+        free(obj->objs[i].name);
+        listDelete(obj->objs[i].positions);
+        listDelete(obj->objs[i].normals);
+        listDelete(obj->objs[i].faces);
+    }
+
+    listDelete(obj->objs);
 }
 
 
@@ -83,65 +90,12 @@ void objToSmoothShadedMesh(OBJ* obj, MeshData* out_data) {
 }
 
 
-/*
-
-    algo draft:
-
-        create lookup table of verts with size of listLength(obj->positions)
-
-        loop faces
-            loop verts in face
-                check to see if the vertex already exist in lookup table
-                if so:
-                    test face normal with every other face that is registered to this vertex
-                    if the face normal deviates 
-                if not:
-                    initialize the vertex in lookup table
-                    add to final vertex array
-        
-
-*/
-
-typedef struct Node {
-    face* face;
-    struct Node* next;
-} Node;
-
-static void addFace(Node* node, face* face) {
-    if (node->face) {
-        node->next = malloc(sizeof(Node));
-        node->next->face = face;
-    } else {
-        node->face = face;
-    }
-}
-
 void objToMesh(OBJ* obj, u32 normal_threshold_angle, MeshData* out_data) {
-    
-    u32 vertFacesLen = listLength(obj->positions);
-    Node vertFaces[vertFacesLen];
-    
-    for (int i = 0; i < listLength(obj->faces); i++) {
-        face* face = &obj->faces[i];
-        for (int k = 0; k < 3; k++) {
-            addFace(&vertFaces[face->vertices[k].pos_index], face);
-        }
-    
-    
-        u32 normalIndex = face->vertices[0].normal_index;
-        vec3 faceNormal = obj->normals[normalIndex];
 
-
-    }
-
-    for (int i = 0; i < vertFacesLen; i++) {
-        Node* node = &vertFaces[i];
-
-    }
 }
 
 
-void objLoad(const char* filename, OBJ* out_obj) {
+void objLoad(const char* filename, OBJfile* objFile) {
     FILE* file;
 
     if (fopen_s(&file, filename, "r")) {
@@ -149,9 +103,10 @@ void objLoad(const char* filename, OBJ* out_obj) {
         return;
     }
 
-    out_obj->positions = listCreate(vec3);
-    out_obj->normals = listCreate(vec3);
-    out_obj->faces = listCreate(face);
+    objFile->objs = listCreate(OBJ);
+    u32 objCount = 0;
+    OBJ* obj = NULL;
+    u32 basePosIndex = 0;
 
     char line[256];
     while (fgets(line, sizeof(line), file)) {
@@ -159,13 +114,16 @@ void objLoad(const char* filename, OBJ* out_obj) {
 
         char* cursor = line;
         if ((cursor = stringStartsWith(line, "v "))) {
-            
+
+
             vec3 v;
             v.x = strtof(cursor, &cursor);
             v.y = strtof(cursor, &cursor);
             v.z = strtof(cursor, &cursor);
             
-            listAdd(out_obj->positions, v);
+            vec3Add(&obj->pos, v);
+
+            listAdd(obj->positions, v);
 
         } else if ((cursor = stringStartsWith(line, "vt "))) {
 
@@ -176,14 +134,14 @@ void objLoad(const char* filename, OBJ* out_obj) {
             v.y = strtof(cursor, &cursor);
             v.z = strtof(cursor, &cursor);
             
-            listAdd(out_obj->normals, v);
+            listAdd(obj->normals, v);
 
         } else if ((cursor = stringStartsWith(line, "f "))) {
             face tri;
 
             for (int i = 0; i < 3; i++) {
                 
-                tri.vertices[i].pos_index = strtol(cursor, &cursor, 10) - 1;
+                tri.vertices[i].pos_index = strtol(cursor, &cursor, 10) - 1 - basePosIndex;
                 cursor++;
 
                 tri.vertices[i].uv_index = strtol(cursor, &cursor, 10) - 1;
@@ -192,29 +150,48 @@ void objLoad(const char* filename, OBJ* out_obj) {
                 tri.vertices[i].normal_index = strtol(cursor, &cursor, 10) - 1;
             }
 
-            listAdd(out_obj->faces, tri);
+            listAdd(obj->faces, tri);
+            
+        } else if ( (cursor = stringStartsWith(line, "o ")) ) {
+            if (obj) {
+                u32 len = listLength(obj->positions);
+                // TODO: base index for uvs and normals
+                basePosIndex += len;
+
+                // calc object position
+                vec3Scale(&obj->pos, 1.0f / (f32)len);
+                // make vertex positions local
+                for (u32 i = 0; i < len; i++) {
+                    vec3Sub(&obj->positions[i], obj->pos);
+                }
+            }
+
+            listAdd(objFile->objs, (OBJ){0});
+            obj = &objFile->objs[objCount++];
+            obj->positions = listCreate(vec3);
+            obj->normals = listCreate(vec3);
+            obj->faces = listCreate(face);
+
+            u32 len = 0;
+            while (*(cursor + ++len) != '\n');
+
+            obj->name = malloc(len + 1);
+            for (u32 i = 0; i < len; i++) {
+                obj->name[i] = cursor[i];
+            }
+            obj->name[len] = '\0';
         }
-
-
-        //printf("%s", line);
     }
 
     fclose(file);
 
 
-    /*for (int i = 0; i < listLength(positions); i++) {
-        printf("[%i] = %f, %f, %f\n", i, positions[i].x, positions[i].y, positions[i].z);
-    }
-    for (int i = 0; i < listLength(normals); i++) {
-        printf("[%i] = %f, %f, %f\n", i, normals[i].x, normals[i].y, normals[i].z);
-    }
-
-    for (int i = 0; i < listLength(faces); i++) {
-        printf("[%i] = ", i);
-        for (int j = 0; j < 3; j++) {
-            printf("%i, %i, %i      ", faces[i].vertices[j].pos_index, faces[i].vertices[j].uv_index, faces[i].vertices[j].normal_index);
+    { // print
+        printf("%s\n", filename);
+        u32 len = listLength(objFile->objs);
+        for (u32 i = 0; i < len; i++) {
+            printf("  %d. %s\n", i, objFile->objs[i].name);
         }
-        printf("\n");
-    }*/
 
+    }
 }
