@@ -184,7 +184,8 @@ static void updateShip(Ship* ship) {
     // angular dampning
     //vec3Scale(&ship->rb.angularVelocity, 0.95f);
 
-
+    gizmoColor(0, 1, 0);
+    gizmoPoint(ship->transform.position);
 
     { // buoyancy
         // TODO: we don't need floating points for each side of the boat, boats are always symmetrical
@@ -819,28 +820,24 @@ int main() {
 
     
     { // pyramid
-        OBJfile obj;
-        objLoad("src/models/pyramid.obj", &obj);
+        OBJ* obj = objLoad("src/models/pyramid.obj");
         
         MeshData objData;
-        objToFlatShadedMesh(&obj.objs[0], &objData);
+        objToFlatShadedMesh(obj, &objData);
         
-        objFree(&obj);
+        objFree(obj);
         
         Mesh m;
         meshCreate(objData.vertexCount, objData.vertices, objData.indexCount, objData.indices, &m);
-        
-
     }
     
     { // boat
-        OBJfile objFile;
-        objLoad("src/models/Boate.obj", &objFile);
+        OBJ* obj = objLoad("src/models/Boate.obj");
 
         MeshData data;
-        objToSmoothShadedMesh(&objFile.objs[2], &data);
+        objToSmoothShadedMesh(obj, &data);
         
-        objFree(&objFile);
+        objFree(obj);
         
         Mesh mesh, sm;
         meshFromData(&data, &mesh);
@@ -856,30 +853,34 @@ int main() {
     { // load ships
         g_Ships = listCreate(Ship);
 
-        OBJfile file;
-        objLoad("src/models/Ships.obj", &file);
-
-        u32 len = listLength(file.objs);
-        for (u32 i = 0; i < len; i++) {
-            MeshData data;
-            objToSmoothShadedMesh(&file.objs[i], &data);
-            
-            Ship ship = {0};
-            ship.rb.mass = 1;
-            meshFromData(&data, &ship.mesh);
-            transformSetDefaults(&ship.transform);
-            ship.transform.position = file.objs[i].pos;
-
-            transformToMatrix(&ship.transform, &ship.modelMatrix);
-
-            listAdd(g_Ships, ship);
+        OBJ* obj = objLoad("src/models/Ships.obj");
 
 
-            free(data.vertices);
-            free(data.indices);
+        OBJ* cobj = obj;
+        while (cobj) {
+            if (cobj->name[0] != 'R' && cobj->name[0] != 'T') {
+
+                MeshData data;
+                objToSmoothShadedMesh(cobj, &data);
+                
+                Ship ship = {0};
+                ship.rb.mass = 1;
+                meshFromData(&data, &ship.mesh);
+                transformSetDefaults(&ship.transform);
+                ship.transform.position = cobj->position;
+
+                transformToMatrix(&ship.transform, &ship.modelMatrix);
+
+                listAdd(g_Ships, ship);
+
+                free(data.vertices);
+                free(data.indices);
+            }
+
+            cobj = cobj->next;
         }
 
-        objFree(&file);
+        objFree(obj);
     }
     
     

@@ -12,18 +12,30 @@ typedef struct {
 
 typedef struct OBJ {
     char* name;
-    vec3* positions;
-    vec3* normals;
+    vec3* vertex_positions;
+    vec3* vertex_normals;
     face* faces;
-    vec3 pos;
+    vec3 position;
+    vec3 boundingbox[2];
+
+    struct OBJ* next;
 } OBJ;
 
-typedef struct OBJfile {
-    OBJ* objs; // darray
-} OBJfile;
+// typedef struct newOBJ {
+//     vec3* vertex_positions;
+//     vec3* vertex_normals;
+//     face* triangles;
 
-void objLoad(const char* filename, OBJfile* objFile);
-void objFree(OBJfile* obj);
+//     struct {
+//         char* name;
+//         u32 start_tri, count_tri;
+//     }* objs;
+
+// } newOBJ;
+
+
+OBJ* objLoad(const char* filename);
+void objFree(OBJ* obj);
 
 void objToFlatShadedMesh(OBJ* obj, MeshData* out_data);
 void objToSmoothShadedMesh(OBJ* obj, MeshData* out_data);

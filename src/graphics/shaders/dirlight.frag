@@ -9,13 +9,11 @@ in vec2 uv;
 out vec4 LightColor;
 
 void main() {
-    vec3 ld = normalize(vec3(1.0));
+    vec3 ld = normalize(vec3(1, 3, 1));
 
 
     // Calculate light direction in view space
     // TODO: possibly do this on the CPU side
-    // TODO: are these two lines equivalent?
-    // vec3 ld = (camera.view * vec4(lightDir, 0.0)).xyz;
     ld = mat3(camera.view) * ld;
 
 
