@@ -18,6 +18,7 @@ typedef struct OBJ {
     vec3 position;
     vec3 boundingbox[2];
 
+    struct OBJ* child;
     struct OBJ* next;
 } OBJ;
 

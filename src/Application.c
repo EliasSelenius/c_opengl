@@ -154,6 +154,7 @@ typedef struct Ship {
     Transform transform;
     Rigidbody rb;
     Mesh mesh;
+    vec3 boundingbox[2];
 
     union {
         // NOTE: model matrix is always orthonormalized, as we only use position and rotation
@@ -190,14 +191,12 @@ static void updateShip(Ship* ship) {
     { // buoyancy
         // TODO: we don't need floating points for each side of the boat, boats are always symmetrical
         static vec3 offsets[] = {
-            { 2.1f,  -0.2f, 13.0f },
-            { -2.1f, -0.2f, 13.0f },
-            
-            { 2.9f,  -0.2f, 0.0f },
-            { -2.9f,  -0.2f, 0.0f },
-
-            { 2.1f,  -0.2f, -10.0f },
-            { -2.1f, -0.2f, -10.0f }
+            { 2.1f,  -1.2f, 13.0f },
+            { -2.1f, -1.2f, 13.0f },
+            { 2.9f,  -1.2f, 0.0f },
+            { -2.9f, -1.2f, 0.0f },
+            { 2.1f,  -1.2f, -10.0f },
+            { -2.1f, -1.2f, -10.0f }
         };
 
         i32 offsetsCount = sizeof(offsets) / sizeof(*offsets);
@@ -261,6 +260,16 @@ static void updateShip(Ship* ship) {
         f.z = -f.z * factor;
 
         vec3Add(&ship->rb.angularVelocity, f);
+    }
+
+    {
+        gizmoColor(0.1f, 0.5f, 0.8f);
+        vec3 p = ship->boundingbox[0];
+        mat4MulVec3(&p, &ship->modelMatrix);
+        gizmoPoint(p);
+        p = ship->boundingbox[1];
+        mat4MulVec3(&p, &ship->modelMatrix);
+        gizmoPoint(p);
     }
 }
 
@@ -770,6 +779,14 @@ static void updateInput() {
     }
 }
 
+OBJ* getObjByIndex(OBJ* obj, u32 index) {
+    while (index) {
+        obj = obj->next;
+        index--;
+    }
+    return obj;
+}
+
 
 int main() {
 
@@ -855,27 +872,32 @@ int main() {
 
         OBJ* obj = objLoad("src/models/Ships.obj");
 
+        u32 i = 0;
 
         OBJ* cobj = obj;
         while (cobj) {
-            if (cobj->name[0] != 'R' && cobj->name[0] != 'T') {
+            
+            MeshData data;
+            objToSmoothShadedMesh(cobj, &data);
+            
+            Ship ship = {0};
+            ship.rb.mass = 1;
+            meshFromData(&data, &ship.mesh);
+            transformSetDefaults(&ship.transform);
+            // ship.transform.position = (vec3) { i * 10, 10, 0 };
+            ship.transform.position = cobj->position;
 
-                MeshData data;
-                objToSmoothShadedMesh(cobj, &data);
-                
-                Ship ship = {0};
-                ship.rb.mass = 1;
-                meshFromData(&data, &ship.mesh);
-                transformSetDefaults(&ship.transform);
-                ship.transform.position = cobj->position;
+            ship.boundingbox[0] = cobj->boundingbox[0];
+            ship.boundingbox[1] = cobj->boundingbox[1];
 
-                transformToMatrix(&ship.transform, &ship.modelMatrix);
+            transformToMatrix(&ship.transform, &ship.modelMatrix);
 
-                listAdd(g_Ships, ship);
+            listAdd(g_Ships, ship);
 
-                free(data.vertices);
-                free(data.indices);
-            }
+            free(data.vertices);
+            free(data.indices);
+
+            i++;
 
             cobj = cobj->next;
         }
