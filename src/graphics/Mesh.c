@@ -2,6 +2,8 @@
 #include <GL.h>
 #include "glUtils.h"
 #include <stdlib.h>
+#include "../List.h"
+#include "../Application.h"
 
 void setupAttribs() {
     vertex* vert = NULL;
@@ -36,12 +38,23 @@ void meshCreate(u32 vertexCount, vertex* vertices, u32 indexCount, u32* indices,
 }
 
 void meshFromData(MeshData* data, Mesh* out_mesh) {
+    out_mesh->groups = data->groups;
     meshCreate(data->vertexCount, data->vertices, data->indexCount, data->indices, out_mesh);
 }
 
 void meshRender(Mesh* mesh) {
     glBindVertexArray(mesh->vao);
-    glDrawElements(GL_TRIANGLES, mesh->elementCount, GL_UNSIGNED_INT, 0);
+
+    if (mesh->groups) {
+        u32 len = listLength(mesh->groups);
+        for (u32 i = 0; i < len; i++) {
+            VertexGroup g = mesh->groups[i];
+            glUniform3f(glGetUniformLocation(app.gPassShader, "u_Color"), i / 3.0f, 1, 1);
+            glDrawElements(GL_TRIANGLES, g.count, GL_UNSIGNED_INT, (void*)(g.start * sizeof(u32)));
+        }
+    } else {
+        glDrawElements(GL_TRIANGLES, mesh->elementCount, GL_UNSIGNED_INT, 0);
+    }
     glBindVertexArray(0);
 }
 

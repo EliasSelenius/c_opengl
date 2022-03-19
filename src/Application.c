@@ -963,11 +963,13 @@ int main() {
             app.deltatime = 0.016;
             acTime -= 0.016;
 
-            updateShip(testShip);
+            if (false) {
+                updateShip(testShip);
 
-            u32 len = listLength(g_Ships);
-            for (u32 i = 0; i < len; i++) {
-                updateShip(&g_Ships[i]);
+                u32 len = listLength(g_Ships);
+                for (u32 i = 0; i < len; i++) {
+                    updateShip(&g_Ships[i]);
+                }
             }
             
             if (!camMode) {

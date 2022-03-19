@@ -3,9 +3,16 @@
 #include "../types.h"
 #include "../math/vec.h"
 
-typedef struct {
+typedef struct VertexGroup {
+    char* materialName;
+    u32 start;
+    u32 count;
+} VertexGroup;
+
+typedef struct Mesh {
     u32 vao, vbo, ebo;
     u32 elementCount;
+    VertexGroup* groups;
 } Mesh;
 
 typedef struct {
@@ -20,6 +27,7 @@ typedef struct MeshData {
     u32 vertexCount, indexCount;
     vertex* vertices;
     u32* indices;
+    VertexGroup* groups;
 } MeshData;
 
 void meshCreate(u32 vertexCount, vertex* vertices, u32 indexCount, u32* indices, Mesh* out_mesh);

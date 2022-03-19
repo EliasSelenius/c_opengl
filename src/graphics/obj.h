@@ -15,6 +15,7 @@ typedef struct OBJ {
     vec3* vertex_positions;
     vec3* vertex_normals;
     face* faces;
+    VertexGroup* groups;
     vec3 position;
     vec3 boundingbox[2];
 

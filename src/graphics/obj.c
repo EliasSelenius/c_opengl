@@ -14,6 +14,7 @@ void objFree(OBJ* obj) {
     listDelete(obj->vertex_normals);
     listDelete(obj->faces);
 
+    if (obj->child) objFree(obj->child);
     if (obj->next) objFree(obj->next);
 
     free(obj);
@@ -28,6 +29,8 @@ void objToFlatShadedMesh(OBJ* obj, MeshData* out_data) {
     u32 len = out_data->vertexCount = out_data->indexCount = listLength(obj->faces) * 3;
     out_data->vertices = malloc(sizeof(vertex) * len);
     out_data->indices = malloc(sizeof(u32) * len);
+    out_data->groups = null;
+    
     u32 vIndex = 0;
     for (int i = 0; i < listLength(obj->faces); i++) {
         for (int k = 0; k < 3; k++) {
@@ -51,6 +54,7 @@ void objToSmoothShadedMesh(OBJ* obj, MeshData* out_data) {
     out_data->vertices = malloc(sizeof(vertex) * out_data->vertexCount);
     out_data->indexCount = listLength(obj->faces) * 3;
     out_data->indices = malloc(sizeof(u32) * out_data->indexCount);
+    out_data->groups = obj->groups;
 
     for (int i = 0; i < out_data->vertexCount; i++) {
         out_data->vertices[i] = (vertex) {
@@ -166,10 +170,14 @@ static OBJ* parseOBJ(FILE* file, char* objname, u32* basePosIndex) {
     obj->vertex_positions = listCreate(vec3);
     obj->vertex_normals = listCreate(vec3);
     obj->faces = listCreate(face);
+    obj->groups = listCreate(VertexGroup);
 
     char line[256];
     while (fgets(line, sizeof(line), file)) {
-        char* cursor = &line[2];
+        // char* cursor = &line[2];
+        char* cursor = line;
+        while (*cursor++ != ' ');
+
         switch (line[0]) {
             
             // comment
@@ -216,17 +224,41 @@ static OBJ* parseOBJ(FILE* file, char* objname, u32* basePosIndex) {
                 listAdd(obj->faces, tri);
             } break;
 
+            case 'u': {
+                // usemtl
+                // NOTE: we are not checking if the token is 'usemtl'. This is probably not nescesary.
+
+                VertexGroup g;
+                g.materialName = getStringUntilNewline(cursor);
+                g.start = listLength(obj->faces) * 3;
+                g.count = -g.start; // NOTE: clever trick
+
+                listAdd(obj->groups, g);
+
+            } break;
+
             // object
             case 'o': {
                 *basePosIndex += listLength(obj->vertex_positions);
                 obj->next = parseOBJ(file, getStringUntilNewline(cursor), basePosIndex);
                 goto finalizeObject;
             } break;
-        }            
+        }
     }
 
 finalizeObject:
     
+    { // calc vertex group count
+        u32 groupCount = listLength(obj->groups);
+        if (groupCount) {
+            groupCount -= 1;
+            for (u32 i = 0; i < groupCount; i++) {
+                obj->groups[i].count += obj->groups[i + 1].start;
+            }
+            obj->groups[groupCount].count = listLength(obj->faces) * 3 - obj->groups[groupCount].start;
+        }
+    }
+
     u32 vlen = listLength(obj->vertex_positions);
     
     // calc average vertex position
@@ -254,7 +286,7 @@ static void printOBJ(OBJ* obj, u32 level) {
     if (obj == null) return;
 
     for (u32 i = 0; i < level; i++) printf("  ");
-    printf("%s\n", obj->name);
+    printf("%s -> (groups: %d)\n", obj->name, listLength(obj->groups));
 
     printOBJ(obj->child, level + 1);
     printOBJ(obj->next, level);
@@ -326,6 +358,7 @@ OBJ* objLoad(const char* filename) {
             if (AABBintersects(parent->boundingbox, current->boundingbox)) {
                 current->next = null;
                 addChild(parent, current);
+                parent->next = null;
             } else {
                 parent->next = current;
                 parent = current;
