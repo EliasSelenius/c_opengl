@@ -24,7 +24,7 @@ void meshCreate(u32 vertexCount, vertex* vertices, u32 indexCount, u32* indices,
     out_mesh->vbo = bufferCreate(vertices, sizeof(vertex) * vertexCount);
     out_mesh->ebo = bufferCreate(indices, sizeof(u32) * indexCount);
 
-    out_mesh->elementCount = indexCount;
+    // out_mesh->elementCount = indexCount;
 
     glGenVertexArrays(1, &out_mesh->vao);
     glBindVertexArray(out_mesh->vao);
@@ -38,23 +38,66 @@ void meshCreate(u32 vertexCount, vertex* vertices, u32 indexCount, u32* indices,
 }
 
 void meshFromData(MeshData* data, Mesh* out_mesh) {
-    out_mesh->groups = data->groups;
+
+    if (data->groups) {
+        u32 vertGroups = listLength(data->groups);
+        if (vertGroups == 0) goto noGroups;
+        out_mesh->drawCount = vertGroups;
+
+        out_mesh->groups_count = malloc(sizeof(u32) * vertGroups);
+        out_mesh->groups_start = malloc(sizeof(void*) * vertGroups);
+
+        for (u32 i = 0; i < vertGroups; i++) {
+            VertexGroup g = data->groups[i];
+            out_mesh->groups_count[i] = g.count;
+            out_mesh->groups_start[i] = (void*)(g.start * sizeof(u32));
+        }
+    } else {
+        noGroups:
+        out_mesh->groups_count = null;
+        out_mesh->groups_start = null;
+        out_mesh->drawCount = data->indexCount;
+    }
+
+
     meshCreate(data->vertexCount, data->vertices, data->indexCount, data->indices, out_mesh);
 }
 
 void meshRender(Mesh* mesh) {
     glBindVertexArray(mesh->vao);
 
+    /*
     if (mesh->groups) {
-        u32 len = listLength(mesh->groups);
-        for (u32 i = 0; i < len; i++) {
+
+        u32 vertGroups = listLength(mesh->groups);
+        GLsizei counts[vertGroups];
+        void* starts[vertGroups];
+        for (u32 i = 0; i < vertGroups; i++) {
             VertexGroup g = mesh->groups[i];
-            glUniform3f(glGetUniformLocation(app.gPassShader, "u_Color"), i / 3.0f, 1, 1);
-            glDrawElements(GL_TRIANGLES, g.count, GL_UNSIGNED_INT, (void*)(g.start * sizeof(u32)));
+            counts[i] = g.count;
+            starts[i] = (void*)(g.start * sizeof(u32));
         }
+
+        glMultiDrawElements(GL_TRIANGLES, counts, GL_UNSIGNED_INT, starts, vertGroups);
+
+        // u32 len = listLength(mesh->groups);
+        // for (u32 i = 0; i < len; i++) {
+        //     VertexGroup g = mesh->groups[i];
+        //     glUniform3f(glGetUniformLocation(app.gPassShader, "u_Color"), i / 3.0f, 1, 1);
+        //     glDrawElements(GL_TRIANGLES, g.count, GL_UNSIGNED_INT, (void*)(g.start * sizeof(u32)));
+        // }
+
     } else {
         glDrawElements(GL_TRIANGLES, mesh->elementCount, GL_UNSIGNED_INT, 0);
     }
+    */
+
+    if (mesh->groups_count) {
+        glMultiDrawElements(GL_TRIANGLES, mesh->groups_count, GL_UNSIGNED_INT, mesh->groups_start, mesh->drawCount);   
+    } else {
+        glDrawElements(GL_TRIANGLES, mesh->drawCount, GL_UNSIGNED_INT, 0);
+    }
+
     glBindVertexArray(0);
 }
 
@@ -64,6 +107,9 @@ void meshDelete(Mesh* mesh) {
     glDeleteBuffers(2, &mesh->vbo);
 
     glDeleteVertexArrays(1, &mesh->ebo);
+
+    free(mesh->groups_count);
+    free(mesh->groups_start);
 
     mesh->vao = mesh->vbo = mesh->ebo = 0;
 }
@@ -152,6 +198,7 @@ void genPlane(MeshData* out_result, u32 res) {
 
     out_result->vertices = malloc(sizeof(vertex) * vcount);
     out_result->indices = malloc(sizeof(u32) * icount);
+    out_result->groups = null;
 
     u32 vi = 0, i = 0;
     for (int x = 0; x <= res; x++) {

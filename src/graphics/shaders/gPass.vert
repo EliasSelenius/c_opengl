@@ -1,4 +1,4 @@
-#version 330 core
+#version 460 core
 
 #include "camera.glsl"
 
@@ -22,7 +22,8 @@ void main() {
 
     v.fragpos = pos.xyz;
     v.normal = normalize((view_model * vec4(a_Normal, 0.0)).xyz);
-    v.color = a_Color;
+    // v.color = a_Color;
+    v.color = vec4(float(gl_DrawID) / 3.0);
 
     gl_Position = camera.projection * pos;
 }

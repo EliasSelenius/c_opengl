@@ -11,8 +11,12 @@ typedef struct VertexGroup {
 
 typedef struct Mesh {
     u32 vao, vbo, ebo;
-    u32 elementCount;
-    VertexGroup* groups;
+    // u32 elementCount;
+    // VertexGroup* groups;
+    u32 drawCount;
+    i32* groups_count;
+    void** groups_start; 
+
 } Mesh;
 
 typedef struct {

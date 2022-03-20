@@ -835,7 +835,8 @@ int main() {
 
     }
 
-    
+
+    /*    
     { // pyramid
         OBJ* obj = objLoad("src/models/pyramid.obj");
         
@@ -846,7 +847,7 @@ int main() {
         
         Mesh m;
         meshCreate(objData.vertexCount, objData.vertices, objData.indexCount, objData.indices, &m);
-    }
+    } */ 
     
     { // boat
         OBJ* obj = objLoad("src/models/Boate.obj");
@@ -939,17 +940,13 @@ int main() {
         {
             for (u32 x = 0; x < 20; x++) {
                 for (u32 z = 0; z < 20; z++) {
-                    vec2 coord = {x, z};
-                    vec3 pos = wave(coord);
-                    pos.x += coord.x;
-                    pos.z += coord.y;
-                    float r = random2(pos.x, pos.z);
+                    float r = random2(x, z);
                     r = (r + 1.0f) / 2.0f;
                     gizmoColor(r, r, r);
-                    gizmoPoint(pos);
 
-                    // f32 h = approximateWaveHeight(coord.x, coord.y);
-                    // gizmoPoint((vec3) {x, h, z});
+                    vec2 coord = {x, z};
+                    f32 h = approximateWaveHeight(coord.x, coord.y);
+                    gizmoPoint((vec3) {x, h, z});
                 
                 }
             }
@@ -963,7 +960,7 @@ int main() {
             app.deltatime = 0.016;
             acTime -= 0.016;
 
-            if (false) {
+            if (true) {
                 updateShip(testShip);
 
                 u32 len = listLength(g_Ships);

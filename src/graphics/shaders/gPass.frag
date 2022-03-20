@@ -1,4 +1,4 @@
-#version 330 core
+#version 460 core
 
 #include "camera.glsl"
 
@@ -18,6 +18,7 @@ in Fragdata {
 void main() {
     FragPos = frag.fragpos;
     FragNormal = normalize(frag.normal);
-    // FragColor = frag.color.rgb;
-    FragColor = u_Color;
+    FragColor = frag.color.rgb;
+    // FragColor = u_Color;
+    // FragColor = vec3(float(gl_DrawID) / 3.0);
 }
