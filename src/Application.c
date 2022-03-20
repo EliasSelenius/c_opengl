@@ -179,12 +179,7 @@ static void updateShip(Ship* ship) {
     // gravity
     ship->rb.velocity.y -= 9.8f * app.deltatime;
 
-    // TODO: linear and angular dampning scaled by deltatime
-    // air friction
-    //vec3Scale(&ship->rb.velocity, 0.95f);
-    // angular dampning
-    //vec3Scale(&ship->rb.angularVelocity, 0.95f);
-
+    // render pivot point
     gizmoColor(0, 1, 0);
     gizmoPoint(ship->transform.position);
 
@@ -639,23 +634,12 @@ static void cameraFlyControll() {
     
 }
 
-typedef enum CameraMode {
-    CAM_FREE,
-    CAM_BOAT
-} CameraMode;
 
 static void drawframe() {
     glClearColor(0,0,0, 1);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     
-
-    switch (camMode) {
-        case true: cameraFlyControll(); break;
-        case false: cameraBoatControll(); break;
-    }
-
     cameraUse(&g_Camera);
-
 
     { // geometry pass
         glBindFramebuffer(GL_FRAMEBUFFER, app.gBuffer->id);
@@ -819,13 +803,6 @@ int main() {
             planeData.vertices[i].pos.y = v;
 
             planeData.vertices[i].pos.y -= 50.0f;
-
-
-            if (planeData.vertices[i].pos.y > -2) {
-                planeData.vertices[i].color = (vec4) { 0.1f, 0.9f, 0.2f, 1.0f };
-            } else {
-                planeData.vertices[i].color = (vec4) { 1.0f, 1.0f, 101.0f / 256.0f, 1.0f };
-            }
         }
 
         meshGenNormals(&planeData);
@@ -917,17 +894,28 @@ int main() {
     }
     
     
-    static f64 acTime = 0.0;
+
+    static f64 targetdelta = 1.0 / 60.0;
+    app.time = glfwGetTime();
+    app.prevtime = app.time;
+    printf("starting time: %f", app.time);
 
 
     while (!glfwWindowShouldClose(app.window)) {
-        
+
+        // calc time        
         app.prevtime = app.time;
         app.time = glfwGetTime();
         app.deltatime = app.time - app.prevtime;
         
-
-
+        // is deltatime unreasonably large? if so pretend time did'nt move
+        if (app.deltatime > targetdelta * 1.1) {
+            glfwSetTime(app.prevtime);
+            app.time = glfwGetTime();
+            app.deltatime = 0;
+        }
+        
+        // tell the GPU about time 
         f32 time = app.time;
         glBindBuffer(GL_ARRAY_BUFFER, app.appUBO->bufferId);
         glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(time), &time);
@@ -935,9 +923,9 @@ int main() {
 
 
         updateInput();
-        drawframe();
+        
 
-        {
+        { // render wave points
             for (u32 x = 0; x < 20; x++) {
                 for (u32 z = 0; z < 20; z++) {
                     float r = random2(x, z);
@@ -947,41 +935,34 @@ int main() {
                     vec2 coord = {x, z};
                     f32 h = approximateWaveHeight(coord.x, coord.y);
                     gizmoPoint((vec3) {x, h, z});
+                }
+            }
+        }
+
+        if (camMode) {
+            cameraFlyControll();
+        } else {
+            cameraBoatControll();
+            if (wasd.y < 0) rbAddForce(&testShip->rb, (vec3) {0, 1, 0});
+            if (wasd.y > 0) {
+                vec3 force = testShip->forward.xyz;
+                vec3Scale(&force, app.deltatime * 20.0f);
+                rbAddForce(&testShip->rb, force);
+            }
+            vec3Add(&testShip->rb.angularVelocity, (vec3) { 0, -wasd.x * app.deltatime, 0 });
+        }
+
+        if (true) {
+            updateShip(testShip);
+
+            u32 len = listLength(g_Ships);
+            for (u32 i = 0; i < len; i++) {
+                updateShip(&g_Ships[i]);
+            }
+        }
                 
-                }
-            }
-        }
-
-        
+        drawframe();
         mouse_scroll = 0.0f;
-
-        acTime += app.deltatime;
-        if (acTime > 0.016) {
-            app.deltatime = 0.016;
-            acTime -= 0.016;
-
-            if (true) {
-                updateShip(testShip);
-
-                u32 len = listLength(g_Ships);
-                for (u32 i = 0; i < len; i++) {
-                    updateShip(&g_Ships[i]);
-                }
-            }
-            
-            if (!camMode) {
-                if (wasd.y < 0) rbAddForce(&testShip->rb, (vec3) {0, 1, 0});
-                if (wasd.y > 0) {
-                    vec3 force = testShip->forward.xyz;
-                    vec3Scale(&force, app.deltatime * 20.0f);
-                    rbAddForce(&testShip->rb, force);
-                }
-                vec3Add(&testShip->rb.angularVelocity, (vec3) { 0, -wasd.x * app.deltatime, 0 });
-            }
-            
-        }
-
-        // printf("deltatime: %f\n", app.deltatime);
 
         glfwSwapBuffers(app.window);
         glfwPollEvents();
