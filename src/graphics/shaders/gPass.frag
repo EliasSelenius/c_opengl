@@ -1,7 +1,5 @@
 #version 460 core
 
-#include "camera.glsl"
-
 
 layout (location = 0) out vec3 FragPos;
 layout (location = 1) out vec3 FragNormal;

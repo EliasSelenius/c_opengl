@@ -14,7 +14,6 @@ out vec4 FragColor;
 in Fragdata {
     vec3 fragpos;
     vec3 normal;
-    vec4 color;
 } frag;
 
 void main() {

@@ -13,12 +13,10 @@ uniform vec2  u_waveDirection = vec2(-1, 1);
 
 layout (location = 0) in vec3 a_Pos;
 layout (location = 1) in vec3 a_Normal;
-layout (location = 2) in vec4 a_Color;
 
 out Fragdata {
     vec3 fragpos;
     vec3 normal;
-    vec4 color;
 } v;
 
 
@@ -66,48 +64,5 @@ void main() {
     // output
     v.fragpos = (camera.view * wpos).xyz;
     v.normal = (camera.view * vec4(normalize(cross(binormal, tangent)), 0)).xyz;
-    v.color = a_Color;
     gl_Position = camera.projection * camera.view * wpos;
-
-
-    
-
-
-
-    /* 
-    {
-        //         o v1
-        //       / | \
-        //      /  |  \
-        //  v4 o---o---o v2
-        //      \  |  /
-        //       \ | /
-        //         o v3
-        
-        vec3 v1 = vec3(0, 0, 1);
-        vec3 v2 = vec3(1, 0, 0);
-        vec3 v3 = vec3(0, 0, -1);
-        vec3 v4 = vec3(-1, 0, 0);
-
-        v1 += wavePoint(v1.xz + coord);
-        v2 += wavePoint(v2.xz + coord);
-        v3 += wavePoint(v3.xz + coord);
-        v4 += wavePoint(v4.xz + coord);
-
-        // v1.y = waveHeight(wpos.xz + v1.xz);
-        // v2.y = waveHeight(wpos.xz + v2.xz);
-        // v3.y = waveHeight(wpos.xz + v3.xz);
-        // v4.y = waveHeight(wpos.xz + v4.xz);
-
-        vec3 n1 = cross(v1, v2);
-        vec3 n2 = cross(v2, v3);
-        vec3 n3 = cross(v3, v4);
-        vec3 n4 = cross(v4, v1);
-
-        v.normal = (camera.view * vec4(normalize(n1 + n2 + n3 + n4), 0.0)).xyz;
-    }
-    */
-
-
-
 }

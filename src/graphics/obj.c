@@ -41,7 +41,6 @@ void objToFlatShadedMesh(OBJ* obj, MeshData* out_data) {
             u32 pI = obj->faces[i].vertices[k].pos_index;
             out_data->vertices[vIndex].pos = obj->vertex_positions[pI];
             out_data->vertices[vIndex].normal = obj->vertex_normals[obj->faces[i].vertices[k].normal_index];
-            out_data->vertices[vIndex].color = (vec4) { 1, 1, 1, 1 };
 
             vIndex++;
         }
@@ -59,8 +58,7 @@ void objToSmoothShadedMesh(OBJ* obj, MeshData* out_data) {
     for (int i = 0; i < out_data->vertexCount; i++) {
         out_data->vertices[i] = (vertex) {
             .pos = obj->vertex_positions[i],
-            .normal = (vec3) {0,0,0},
-            .color = (vec4) {1,1,1,1}
+            .normal = (vec3) {0,0,0}
         };
     }
 

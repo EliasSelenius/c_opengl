@@ -13,9 +13,6 @@ void setupAttribs() {
 
     glEnableVertexAttribArray(1);
     glVertexAttribPointer(1, 3, GL_FLOAT, false, sizeof(vertex), &vert->normal);
-
-    glEnableVertexAttribArray(2);
-    glVertexAttribPointer(2, 4, GL_FLOAT, false, sizeof(vertex), &vert->color);
 }
 
 
@@ -204,8 +201,7 @@ void genPlane(MeshData* out_result, u32 res) {
     for (int x = 0; x <= res; x++) {
         for (int y = 0; y <= res; y++) {
             out_result->vertices[x * vres + y] = (vertex){
-                .pos = { x - half_res, 0, y - half_res },
-                .color = { 1, 1, 1, 1 }
+                .pos = { x - half_res, 0, y - half_res }
             };
 
             if (x < res && y < res) {

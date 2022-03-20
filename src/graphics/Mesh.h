@@ -22,10 +22,7 @@ typedef struct Mesh {
 typedef struct {
     vec3 pos;
     vec3 normal;
-    vec4 color;
 } vertex;
-
-STATIC_ASSERT(sizeof(vertex) == 40, "");
 
 typedef struct MeshData {
     u32 vertexCount, indexCount;
