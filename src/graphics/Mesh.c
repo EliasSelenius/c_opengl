@@ -44,13 +44,27 @@ void meshFromData(MeshData* data, Mesh* out_mesh) {
         out_mesh->groups_count = malloc(sizeof(u32) * vertGroups);
         out_mesh->groups_start = malloc(sizeof(void*) * vertGroups);
 
+        u32 materialDataSize = sizeof(vec4) * vertGroups;
+        vec4* materialData = malloc(materialDataSize);
+
         for (u32 i = 0; i < vertGroups; i++) {
             VertexGroup g = data->groups[i];
             out_mesh->groups_count[i] = g.count;
             out_mesh->groups_start[i] = (void*)(g.start * sizeof(u32));
+
+            MTL* mtl = data->materialLibrary;
+            while (mtl && !stringStartsWith(mtl->name, g.materialName)) mtl = mtl->next;
+            if (mtl) {
+                materialData[i] = (vec4) { mtl->Kd.x, mtl->Kd.y, mtl->Kd.z, 1.0 };
+            }
         }
+
+        out_mesh->materialsBuffer = bufferCreate(materialData, materialDataSize);
+        free(materialData);
+
     } else {
         noGroups:
+        out_mesh->materialsBuffer = 0;
         out_mesh->groups_count = null;
         out_mesh->groups_start = null;
         out_mesh->drawCount = data->indexCount;
@@ -66,17 +80,6 @@ void meshRender(Mesh* mesh) {
     /*
     if (mesh->groups) {
 
-        u32 vertGroups = listLength(mesh->groups);
-        GLsizei counts[vertGroups];
-        void* starts[vertGroups];
-        for (u32 i = 0; i < vertGroups; i++) {
-            VertexGroup g = mesh->groups[i];
-            counts[i] = g.count;
-            starts[i] = (void*)(g.start * sizeof(u32));
-        }
-
-        glMultiDrawElements(GL_TRIANGLES, counts, GL_UNSIGNED_INT, starts, vertGroups);
-
         // u32 len = listLength(mesh->groups);
         // for (u32 i = 0; i < len; i++) {
         //     VertexGroup g = mesh->groups[i];
@@ -89,7 +92,9 @@ void meshRender(Mesh* mesh) {
     }
     */
 
+
     if (mesh->groups_count) {
+        ublockBindBuffer(ublockGetByName("Material"), mesh->materialsBuffer);
         glMultiDrawElements(GL_TRIANGLES, mesh->groups_count, GL_UNSIGNED_INT, mesh->groups_start, mesh->drawCount);   
     } else {
         glDrawElements(GL_TRIANGLES, mesh->drawCount, GL_UNSIGNED_INT, 0);

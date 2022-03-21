@@ -168,8 +168,8 @@ typedef struct Ship {
     };
 } Ship;
 
-static Ship* testShip;
 static Ship* g_Ships; // darray
+static Ship* g_PlayerShip;
 
 static void updateShip(Ship* ship) {
 
@@ -266,19 +266,6 @@ static void updateShip(Ship* ship) {
         mat4MulVec3(&p, &ship->modelMatrix);
         gizmoPoint(p);
     }
-}
-
-static Ship* createShip(Mesh* mesh) {
-    Ship* ship = malloc(sizeof(*ship));
-
-    transformSetDefaults(&ship->transform);
-    ship->rb.mass = 1.0f;
-    ship->rb.angularVelocity = (vec3){0};
-    ship->rb.velocity = (vec3){0};
-
-    ship->mesh = *mesh;
-
-    return ship;
 }
 
 
@@ -492,7 +479,7 @@ int appInit() {
         };
 
         app.gBuffer = framebufferCreate(app.width, app.height, attachCount, attachments, fbDepth_DepthComponent);
-        app.gPassShader = shaderLoadByName("gPass");        
+        app.gPassShader = shaderLoadByName("gPass");
     }
 
     { // light pass stuff
@@ -533,13 +520,22 @@ int appInit() {
     initUBO(&app.appUBO, "Application", sizeof(f32) * 4);
     bufferViewportSizeToUBO((f32[2]){w,h});
     
+    { // materials UBO
+        // Ublock* ubo = ublockGetByName("Material");
+        // vec4 data[3] = {
+        //     { 1, 0, 0, 1 },
+        //     { 0, 1, 0, 1 },
+        //     { 0, 0, 1, 1 }
+        // };
+        // u32 buffer = bufferCreate(data, sizeof(data));
+        // ublockBindBuffer(ubo, buffer);
+    }
     
     //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LEQUAL);
     glEnable(GL_CULL_FACE);
     
-    // TODO look up glMultiDrawElements()
 
     setupSkybox();
 
@@ -589,7 +585,7 @@ static void cameraBoatControll() {
     glfwSetInputMode(app.window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
 
-    g_Camera.transform.position = testShip->transform.position;
+    g_Camera.transform.position = g_PlayerShip->transform.position;
     g_Camera.transform.position.y += yOffset;
 
 
@@ -599,7 +595,7 @@ static void cameraBoatControll() {
 
     g_Camera.transform.position.x += sin(xAngle) * zoom;
     g_Camera.transform.position.z += cos(xAngle) * zoom;
-    transformLookAt(&g_Camera.transform, testShip->transform.position, (vec3) {0, 1, 0});
+    transformLookAt(&g_Camera.transform, g_PlayerShip->transform.position, (vec3) {0, 1, 0});
 }
 
 static void cameraFlyControll() {
@@ -655,9 +651,6 @@ static void drawframe() {
             bufferInit(app.modelUBO->bufferId, &g_Ships[i].modelMatrix, sizeof(mat4));
             meshRender(&g_Ships[i].mesh);    
         }
-
-        bufferInit(app.modelUBO->bufferId, &testShip->modelMatrix, sizeof(mat4));
-        meshRender(&testShip->mesh);
 
 
         { // test reading from gbuffer
@@ -826,25 +819,6 @@ int main() {
         meshCreate(objData.vertexCount, objData.vertices, objData.indexCount, objData.indices, &m);
     } */ 
     
-    { // boat
-        OBJ* obj = objLoad("src/models/Boate.obj");
-
-        MeshData data;
-        objToSmoothShadedMesh(obj, &data);
-        
-        objFree(obj);
-        
-        Mesh mesh, sm;
-        meshFromData(&data, &mesh);
-
-        free(data.vertices);
-        free(data.indices);
-
-        testShip = createShip(&mesh);
-        testShip->transform.position = (vec3) { 40, 4, 0 };
-
-    }
-
     { // load ships
         g_Ships = listCreate(Ship);
 
@@ -882,7 +856,30 @@ int main() {
 
         objFree(obj);
     }
-    
+
+    { // boat
+        OBJ* obj = objLoad("src/models/Boate.obj");
+
+        MeshData data;
+        objToSmoothShadedMesh(obj, &data);
+        
+        objFree(obj);
+
+        Ship ship;
+        ship.rb.mass = 1.0f;
+
+        transformSetDefaults(&ship.transform);
+        ship.transform.position = (vec3) { 40, 4, 0 };
+        transformToMatrix(&ship.transform, &ship.modelMatrix);
+
+        meshFromData(&data, &ship.mesh);
+        free(data.vertices);
+        free(data.indices);
+
+        listAdd(g_Ships, ship);
+        g_PlayerShip = &g_Ships[listLength(g_Ships) - 1];
+    }
+
     
     { // water
         MeshData planeData;
@@ -939,26 +936,24 @@ int main() {
             }
         }
 
-        if (camMode) {
-            cameraFlyControll();
-        } else {
-            cameraBoatControll();
-            if (wasd.y < 0) rbAddForce(&testShip->rb, (vec3) {0, 1, 0});
-            if (wasd.y > 0) {
-                vec3 force = testShip->forward.xyz;
-                vec3Scale(&force, app.deltatime * 20.0f);
-                rbAddForce(&testShip->rb, force);
-            }
-            vec3Add(&testShip->rb.angularVelocity, (vec3) { 0, -wasd.x * app.deltatime, 0 });
-        }
-
         if (true) {
-            updateShip(testShip);
-
             u32 len = listLength(g_Ships);
             for (u32 i = 0; i < len; i++) {
                 updateShip(&g_Ships[i]);
             }
+        }
+
+        if (camMode) {
+            cameraFlyControll();
+        } else {
+            cameraBoatControll();
+            if (wasd.y < 0) rbAddForce(&g_PlayerShip->rb, (vec3) {0, 1, 0});
+            if (wasd.y > 0) {
+                vec3 force = g_PlayerShip->forward.xyz;
+                vec3Scale(&force, app.deltatime * 20.0f);
+                rbAddForce(&g_PlayerShip->rb, force);
+            }
+            vec3Add(&g_PlayerShip->rb.angularVelocity, (vec3) { 0, -wasd.x * app.deltatime, 0 });
         }
                 
         drawframe();
@@ -968,7 +963,6 @@ int main() {
         glfwPollEvents();
     }
 
-    //glfwGetWindowPos
     
     { // save properties
         FILE* file;
@@ -989,8 +983,6 @@ int main() {
         }
     }
 
-    
-
 
     if (random((i32)app.time) < 0) {
         printf("Commencing Program Self-Destruct...\n");
@@ -1004,4 +996,3 @@ int main() {
     glfwDestroyWindow(app.window);
     glfwTerminate();
 }
-

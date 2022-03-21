@@ -24,14 +24,13 @@ get done now:
     - <done> PBR
     - <done> HDR tone-mapping & gamma-correction
     - <done> reimplement water rendering
+    - <done> skybox
+    - <done> obj materials
 
-    - skybox
-    - materials
+    - render sails (node graph)
+    - edit wave parameters
     - boat camera controller
     - boat controller
-    - shader noise algos
-    - directional lights
-    - point lights
     - "hotreload" of terrain generation parameters, for rapid development
 
 

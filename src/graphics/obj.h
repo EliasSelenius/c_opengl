@@ -2,6 +2,12 @@
 
 #include "Mesh.h"
 
+typedef struct VertexGroup {
+    char* materialName;
+    u32 start;
+    u32 count;
+} VertexGroup;
+
 typedef struct {
     u32 pos_index, normal_index, uv_index;
 } vertex_index;
@@ -9,6 +15,12 @@ typedef struct {
 typedef struct {
     vertex_index vertices[3];
 } face;
+
+typedef struct MTL {
+    char* name;
+    vec3 Ka, Kd, Ks, Ke;
+    struct MTL* next;
+} MTL;
 
 typedef struct OBJ {
     char* name;
@@ -19,6 +31,7 @@ typedef struct OBJ {
     vec3 position;
     vec3 boundingbox[2];
 
+    MTL* mtllib;
     struct OBJ* child;
     struct OBJ* next;
 } OBJ;
@@ -34,6 +47,9 @@ typedef struct OBJ {
 //     }* objs;
 
 // } newOBJ;
+
+
+typedef struct MeshData MeshData;
 
 
 OBJ* objLoad(const char* filename);

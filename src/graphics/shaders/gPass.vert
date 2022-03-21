@@ -6,14 +6,21 @@ layout (std140) uniform Model {
     mat4 model;
 };
 
-layout (std140) uniform Material {
+struct Mat {
     vec4 albedo;
-    float metallic;
-    float roughness;
-} material[];
+    // float metallic;
+    // float roughness;
+};
+
+layout (std140) uniform Material {
+    Mat materials[3];
+};
 
 layout (location = 0) in vec3 a_Pos;
 layout (location = 1) in vec3 a_Normal;
+// TODO: per instance attributes
+// layout (location = 2) in vec4 a_Material_Albedo;
+
 
 out Fragdata {
     vec3 fragpos;
@@ -26,9 +33,10 @@ void main() {
     vec4 pos = view_model * vec4(a_Pos, 1.0);
 
     v.fragpos = pos.xyz;
-    v.normal = normalize((view_model * vec4(a_Normal, 0.0)).xyz);
+    v.normal = normalize(mat3(view_model) * a_Normal);
 
-    v.color = vec4(float(gl_DrawID) / 3.0);
+    // v.color = vec4(float(gl_DrawID) / 3.0);
+    v.color = materials[gl_DrawID].albedo;
 
     gl_Position = camera.projection * pos;
 }

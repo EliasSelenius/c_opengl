@@ -54,6 +54,7 @@ void objToSmoothShadedMesh(OBJ* obj, MeshData* out_data) {
     out_data->indexCount = listLength(obj->faces) * 3;
     out_data->indices = malloc(sizeof(u32) * out_data->indexCount);
     out_data->groups = obj->groups;
+    out_data->materialLibrary = obj->mtllib;
 
     for (int i = 0; i < out_data->vertexCount; i++) {
         out_data->vertices[i] = (vertex) {
@@ -95,10 +96,6 @@ void objToMesh(OBJ* obj, u32 normal_threshold_angle, MeshData* out_data) {
 
 }
 
-typedef struct MTL {
-    char* name;
-    
-} MTL;
 
 static char* getStringUntilNewline(char* start) {
     u32 len = 0;
@@ -112,23 +109,55 @@ static char* getStringUntilNewline(char* start) {
     return str;
 }
 
-void mtlLoad(const char* filename) {
+
+static MTL* mtlLoad(const char* filename) {
     FILE* file;
     if (fopen_s(&file, filename, "r")) {
         printf("Could not read file: %s\n", filename);
-        return;
+        return null;
     }
+
+    MTL* firstMtl = null;
+    MTL* mtl = null;
 
     char line[256];
     while (fgets(line, sizeof(line), file)) {
         char* cursor = line;
-        if ( (cursor = stringStartsWith(line, "newmtl ")) ) {
+        while (*cursor++ != ' ');
 
-            
+        switch (line[0]) {
+
+            case '#': continue;
+
+            // newmtl
+            case 'n': {
+                MTL* newmtl = malloc(sizeof(MTL));
+                newmtl->name = getStringUntilNewline(cursor);
+                newmtl->next = null;
+
+                if (mtl) mtl->next = newmtl;
+                else firstMtl = newmtl;
+
+                mtl = newmtl;
+
+            } break;
+
+            case 'K': {
+                vec3 value = (vec3) { strtof(cursor, &cursor), strtof(cursor, &cursor), strtof(cursor, &cursor) };
+                switch (line[1]) {
+                    case 'a': mtl->Ka = value; break;
+                    case 'd': mtl->Kd = value; break;
+                    case 's': mtl->Ks = value; break;
+                    case 'e': mtl->Ke = value; break;
+                }
+            } break;
+
         }
     }
 
     fclose(file);
+
+    return firstMtl;
 }
 
 // TODO: probably should make this a mesh thing
@@ -158,9 +187,10 @@ static void approximateCenterOfMass(OBJ* obj) {
 
 static OBJ* parseOBJ(FILE* file, char* objname, u32* basePosIndex) {
     OBJ* obj = malloc(sizeof(OBJ));
+    obj->mtllib = null;
     obj->child = null;
     obj->name = objname;
-    obj->next = NULL;
+    obj->next = null;
     obj->position = (vec3){0};
     obj->boundingbox[0] = (vec3){0};
     obj->boundingbox[1] = (vec3){0};
@@ -312,6 +342,16 @@ static void addChild(OBJ* p, OBJ* c) {
     }
 }
 
+static u32 lastIndexOf(const char* string, char c) {
+    u32 res = 0;
+    u32 i = 0;
+    while (string[i] != '\0') {
+        if (string[i] == c) res = i;
+        i++;
+    }
+    return res;
+}
+
 OBJ* objLoad(const char* filename) {
     FILE* file;
 
@@ -322,6 +362,8 @@ OBJ* objLoad(const char* filename) {
 
     u32 basePosIndex = 0;
     OBJ* res;
+    char* mtllib_name = null;
+
 
     char line[256];
     while (fgets(line, sizeof(line), file)) {
@@ -330,21 +372,49 @@ OBJ* objLoad(const char* filename) {
             res = parseOBJ(file, getStringUntilNewline(&line[2]), &basePosIndex);
             break;
         }
+
+        // mtllib
+        if (line[0] == 'm') {
+            mtllib_name = getStringUntilNewline(&line[7]);
+        }
     }
 
 
     fclose(file);
 
-    { // print
-        printf("%s\n", filename);
-        
-        OBJ* cobj = res;
+    if (mtllib_name) {
+
+        u32 lastI = lastIndexOf(filename, '/');
+        char mtlfile[64];
         u32 i = 0;
-        while (cobj) {
-            printf("  %d. %s\n", i++, cobj->name);
-            cobj = cobj->next;
+        for (; i <= lastI; i++) mtlfile[i] = filename[i];
+
+        u32 len = strlen(mtllib_name);
+        for (u32 j = 0; j < len; j++) mtlfile[i++] = mtllib_name[j];
+        mtlfile[i] = '\0';
+
+
+        res->mtllib = mtlLoad(mtlfile);
+
+        OBJ* next = res->next;
+        while (next) {
+            next->mtllib = res->mtllib;
+            next = next->next;
         }
+
+        free(mtllib_name);
     }
+
+    // { // print
+    //     printf("%s\n", filename);
+        
+    //     OBJ* cobj = res;
+    //     u32 i = 0;
+    //     while (cobj) {
+    //         printf("  %d. %s\n", i++, cobj->name);
+    //         cobj = cobj->next;
+    //     }
+    // }
 
     { // create node graph
         OBJ* parent = res;
@@ -367,8 +437,17 @@ OBJ* objLoad(const char* filename) {
     }
 
     { // print node graph
-        printf("NODE GRAPH: %s\n", filename);
-        printOBJ(res, 0);        
+        // printf("NODE GRAPH: %s\n", filename);
+        // printOBJ(res, 0);        
+    }
+
+    { // print material lib
+        printf("Materials: (%s)\n", filename);
+        MTL* mtl = res->mtllib;
+        while (mtl) {
+            printf("  %s\n", mtl->name);
+            mtl = mtl->next;
+        }
     }
 
     return res;

@@ -2,12 +2,10 @@
 
 #include "../types.h"
 #include "../math/vec.h"
+#include "obj.h"
 
-typedef struct VertexGroup {
-    char* materialName;
-    u32 start;
-    u32 count;
-} VertexGroup;
+typedef struct VertexGroup VertexGroup;
+typedef struct MTL MTL;
 
 typedef struct Mesh {
     u32 vao, vbo, ebo;
@@ -17,6 +15,7 @@ typedef struct Mesh {
     i32* groups_count;
     void** groups_start; 
 
+    u32 materialsBuffer;
 } Mesh;
 
 typedef struct {
@@ -28,6 +27,8 @@ typedef struct MeshData {
     u32 vertexCount, indexCount;
     vertex* vertices;
     u32* indices;
+
+    MTL* materialLibrary;
     VertexGroup* groups;
 } MeshData;
 
