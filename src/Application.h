@@ -3,6 +3,7 @@
 #include <GL.h>
 #include "graphics/Framebuffer.h"
 #include "graphics/shader.h"
+#include "math/vec.h"
 
 typedef struct Application {
     GLFWwindow* window;
@@ -24,12 +25,14 @@ typedef struct Application {
     Ublock* appUBO;
     Ublock* cameraUBO;
     Ublock* modelUBO;
+    Ublock* sunUBO;
 
     f64 time, prevtime, deltatime;
     
 } Application;
 
 extern Application app;
+extern vec3 g_SunDirection;
 
 void appExit();
 void appToggleFullscreen();

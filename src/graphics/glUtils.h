@@ -5,6 +5,7 @@
 
 u32 bufferCreate(void* data, u32 size);
 void bufferInit(u32 buffer, void* data, u32 size);
+void bufferSubData(u32 buffer, u32 offset, void* data, u32 size);
 
 typedef enum Filter {
     Filter_Nearest = 9728,

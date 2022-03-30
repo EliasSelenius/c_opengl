@@ -14,6 +14,12 @@ void bufferInit(u32 buffer, void* data, u32 size) {
     glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
+void bufferSubData(u32 buffer, u32 offset, void* data, u32 size) {
+    glBindBuffer(GL_ARRAY_BUFFER, buffer);
+    glBufferSubData(GL_ARRAY_BUFFER, offset, size, data);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+}
+
 u32 texture2DCreate(u32 width, u32 height, b8 genMipmap, Filter filter, WrapMode wrapmode, GLint internalFormat, GLenum format, GLenum type) {
     u32 t;
     glGenTextures(1, &t);

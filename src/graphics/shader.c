@@ -32,7 +32,7 @@ static void bindUBOs(u32 program) {
 
         u32 uboIndex = glGetUniformBlockIndex(program, name);
 
-        Ublock* ub = ublockGetByName(name);
+        Ublock* ub = uboGetByName(name);
         glUniformBlockBinding(program, uboIndex, ub->bindingPoint);
     }
 }
@@ -275,7 +275,7 @@ static Ublock* createNew(char* name) {
     return ub;
 }
 
-Ublock* ublockGetByName(char* name) {
+Ublock* uboGetByName(char* name) {
     for (int i = 0; i < ublockCount; i++) {
         Ublock* ub = &(ublocks[i]);
         if (strcmp(ub->name, name) == 0) return ub;
@@ -284,7 +284,7 @@ Ublock* ublockGetByName(char* name) {
     return createNew(name);
 }
 
-void ublockBindBuffer(Ublock* ublock, u32 buffer) {
+void uboBindBuffer(Ublock* ublock, u32 buffer) {
     ublock->bufferId = buffer;
     glBindBufferBase(GL_UNIFORM_BUFFER, ublock->bindingPoint, buffer);
 }

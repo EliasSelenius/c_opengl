@@ -13,7 +13,7 @@ typedef struct Mesh {
     // VertexGroup* groups;
     u32 drawCount;
     i32* groups_count;
-    void** groups_start; 
+    u64* groups_start; 
 
     u32 materialsBuffer;
 } Mesh;

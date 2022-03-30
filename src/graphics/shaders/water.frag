@@ -3,7 +3,7 @@
 #include "app.glsl"
 #include "camera.glsl"
 #include "PBR.glsl"
-
+#include "sun.glsl"
 
 layout(binding = 0) uniform sampler2D gBuffer_Pos;
 uniform float u_depthVisibility = 10.0;
@@ -18,10 +18,6 @@ in Fragdata {
 
 void main() {
     //if (length(frag.fragpos) > 25) discard; 
-
-
-    vec3 ld = normalize(vec3(1, 3, 1));
-    ld = (camera.view * vec4(ld, 0.0)).xyz;
 
 
     vec3 normal = normalize(frag.normal);
@@ -59,14 +55,17 @@ void main() {
     vec3 V = normalize(-frag.fragpos);
 
     FragColor.rgb = CalcDirlight(
-        /* light direction */ ld,
-        /* light color     */ vec3(4.0),
+        /* light direction */ sun.vDirection,
+        /* light color     */ sun.color,
         /*                 */ F0,
         /* surface normal  */ normal,
         /*                 */ V,
         /* surface color   */ vec3(finalColor),
         /* roughness       */ 0.5,
         /* metallic        */ metallic);
+
+    // ambient light
+    FragColor += vec4(finalColor.rgb, 0.0) * 0.1;
 
     FragColor.a = finalColor.a;
 

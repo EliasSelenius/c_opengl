@@ -54,7 +54,20 @@ void cameraUpdateMatrices(Camera* cam) {
     updates and uploads matrices to UBO
 */
 void cameraUse(Camera* cam) {
-    cameraUpdateMatrices(cam);
 
+    // camera
+    cameraUpdateMatrices(cam);
     bufferInit(app.cameraUBO->bufferId, &cam->view, sizeof(mat4) * 2);
+
+    
+    // sun direction in view space
+    vec3 ld = g_SunDirection;
+    ld = (vec3) {
+        ld.x * cam->view.row1.x   +   ld.y * cam->view.row2.x   +   ld.z * cam->view.row3.x,
+        ld.x * cam->view.row1.y   +   ld.y * cam->view.row2.y   +   ld.z * cam->view.row3.y,
+        ld.x * cam->view.row1.z   +   ld.y * cam->view.row2.z   +   ld.z * cam->view.row3.z
+    };
+
+    bufferSubData(app.sunUBO->bufferId, 0, &ld, sizeof(ld));
+    
 }

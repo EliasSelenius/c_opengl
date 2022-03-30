@@ -3,20 +3,13 @@
 #include "gBuffer.glsl"
 #include "camera.glsl"
 #include "PBR.glsl"
+#include "sun.glsl"
 
 in vec2 uv;
 
 out vec4 LightColor;
 
 void main() {
-    vec3 ld = normalize(vec3(1, 3, 1));
-
-
-    // Calculate light direction in view space
-    // TODO: possibly do this on the CPU side
-    ld = mat3(camera.view) * ld;
-
-
     gBufferData data = gBufferRead(uv);
 
     vec3 F0 = vec3(0.04);
@@ -26,8 +19,8 @@ void main() {
 
 
     LightColor = vec4(CalcDirlight(
-        /* light direction */ ld,
-        /* light color     */ vec3(4.0),
+        /* light direction */ sun.vDirection,
+        /* light color     */ sun.color,
         /*                 */ F0,
         /* surface normal  */ data.normal,
         /*                 */ V,

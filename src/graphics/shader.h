@@ -29,5 +29,8 @@ u32 shaderLoadByName(const char* name);
 u32 shaderLoad(const char* frag_filename, const char* vert_filename, const char* geom_filename);
 void shaderReload(char* name, u32 program);
 
-Ublock* ublockGetByName(char* name);
-void ublockBindBuffer(Ublock* ublock, u32 buffer);
+Ublock* uboGetByName(char* name);
+void uboBindBuffer(Ublock* ublock, u32 buffer);
+inline void uboBind(char* name, u32 buffer) {
+    uboBindBuffer(uboGetByName(name), buffer);
+}

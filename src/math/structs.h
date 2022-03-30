@@ -20,6 +20,7 @@ STATIC_ASSERT(sizeof(vec3) == 12, "Expected vec3 to be 12 bytes.");
 typedef union vec4 {
     struct { f32 x, y, z, w; };
     struct { vec3 xyz; }; // Where does this align?
+    struct { vec2 xy; vec2 zw; };
     f32 comps[4];
 } vec4;
 STATIC_ASSERT(sizeof(vec4) == 16, "Expected vec4 to be 16 bytes.");

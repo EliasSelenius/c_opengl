@@ -50,7 +50,7 @@ void meshFromData(MeshData* data, Mesh* out_mesh) {
         for (u32 i = 0; i < vertGroups; i++) {
             VertexGroup g = data->groups[i];
             out_mesh->groups_count[i] = g.count;
-            out_mesh->groups_start[i] = (void*)(g.start * sizeof(u32));
+            out_mesh->groups_start[i] = (g.start * sizeof(u32));
 
             MTL* mtl = data->materialLibrary;
             while (mtl && !stringStartsWith(mtl->name, g.materialName)) mtl = mtl->next;
@@ -93,8 +93,9 @@ void meshRender(Mesh* mesh) {
     */
 
 
+    uboBindBuffer(uboGetByName("Material"), mesh->materialsBuffer);
+
     if (mesh->groups_count) {
-        ublockBindBuffer(ublockGetByName("Material"), mesh->materialsBuffer);
         glMultiDrawElements(GL_TRIANGLES, mesh->groups_count, GL_UNSIGNED_INT, mesh->groups_start, mesh->drawCount);   
     } else {
         glDrawElements(GL_TRIANGLES, mesh->drawCount, GL_UNSIGNED_INT, 0);

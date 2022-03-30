@@ -25,7 +25,6 @@
 #include <assert.h>
 
 
-
 Application app;
 
 Camera g_Camera;
@@ -34,8 +33,16 @@ b8 camMode = true;
 f64 mouse_x, mouse_y, pmouse_x, pmouse_y, dmouse_x, dmouse_y, mouse_scroll;
 vec2 wasd;
 
+vec3 g_SunDirection = { 1, 3, 1 };
+
 static Mesh g_waterPlane;
 
+static u32 g_WavesUBO;
+static vec4 g_Waves[3] = {
+    { 1, 1,     0.25f,   60 },
+    { 1, 0.6,   0.25f,   31 },
+    { 1, 1.3,   0.25f,   18 }
+};
 
 static vec3 gerstnerWave(vec2 coord, vec2 waveDir, float waveSteepness, float waveLength) {
     float k = 2.0 * PI / waveLength;
@@ -55,9 +62,18 @@ static vec3 gerstnerWave(vec2 coord, vec2 waveDir, float waveSteepness, float wa
 
 static vec3 wave(vec2 coord) {
     vec3 res = {0};
-    vec3Add(&res, gerstnerWave(coord, (vec2) {1, 1}, 0.25f, 60));
-    vec3Add(&res, gerstnerWave(coord, (vec2) {1, 0.6}, 0.25f, 31));
-    vec3Add(&res, gerstnerWave(coord, (vec2) {1, 1.3}, 0.25f, 18));
+    // vec3Add(&res, gerstnerWave(coord, (vec2) {1, 1}, 0.25f, 60));
+    // vec3Add(&res, gerstnerWave(coord, (vec2) {1, 0.6}, 0.25f, 31));
+    // vec3Add(&res, gerstnerWave(coord, (vec2) {1, 1.3}, 0.25f, 18));
+
+    for (u32 i = 0; i < 3; i++) {
+        vec3Add(&res, gerstnerWave(coord, 
+            g_Waves[i].xy,
+            g_Waves[i].z,
+            g_Waves[i].w
+        ));
+    }
+    
     return res;
 }
 
@@ -100,22 +116,28 @@ static void gizmoSetup() {
 
 }
 
+static u32 g_RenderGizmos = true;
 static void gizmoDispatch() {
-    glBindBuffer(GL_ARRAY_BUFFER, gizmoPointsVBO);
-    u32 len = listLength(gizmoPointsBatch);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(GizmoPoint) * len, gizmoPointsBatch, GL_STATIC_DRAW);
-    
-    glUseProgram(app.gizmoShader);
 
-    GizmoPoint* gp = 0;
+    if (g_RenderGizmos) {
 
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 3, GL_FLOAT, false, sizeof(GizmoPoint), &gp->pos);
-    
-    glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1, 3, GL_FLOAT, false, sizeof(GizmoPoint), &gp->color);
-    
-    glDrawArrays(GL_POINTS, 0, len);
+        glBindBuffer(GL_ARRAY_BUFFER, gizmoPointsVBO);
+        u32 len = listLength(gizmoPointsBatch);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(GizmoPoint) * len, gizmoPointsBatch, GL_STATIC_DRAW);
+        
+        glUseProgram(app.gizmoShader);
+
+        GizmoPoint* gp = 0;
+
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(0, 3, GL_FLOAT, false, sizeof(GizmoPoint), &gp->pos);
+        
+        glEnableVertexAttribArray(1);
+        glVertexAttribPointer(1, 3, GL_FLOAT, false, sizeof(GizmoPoint), &gp->color);
+        
+        glDrawArrays(GL_POINTS, 0, len);
+
+    }
 
     listClear(gizmoPointsBatch);
 }
@@ -148,6 +170,11 @@ typedef struct ShipType {
 } ShipType;
 
 
+typedef struct Sail {
+    Mesh mesh;
+    vec3 pos;
+} Sail;
+
 typedef struct Ship {
 
     //ShipType* shipType;
@@ -156,16 +183,11 @@ typedef struct Ship {
     Mesh mesh;
     vec3 boundingbox[2];
 
-    union {
-        // NOTE: model matrix is always orthonormalized, as we only use position and rotation
-        mat4 modelMatrix;
-        struct {
-            vec4 right;
-            vec4 up;
-            vec4 forward;
-            vec4 pos;
-        };
-    };
+    u32 sailsCount;
+    Sail* sails;    
+
+    // NOTE: model matrix is always orthonormalized, as we only use position and rotation
+    mat4 modelMatrix;
 } Ship;
 
 static Ship* g_Ships; // darray
@@ -357,14 +379,30 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 
     if (action == GLFW_RELEASE) {
 
-        if (key == GLFW_KEY_F11) {
-            appToggleFullscreen();
-        } else if (key == GLFW_KEY_ESCAPE) {
-            appExit();
-        } else if (key == GLFW_KEY_F1) {
-            camMode = !camMode;
-        } else if (key == GLFW_KEY_R) {
-            shaderReload("water", app.waterShader);
+        switch (key) {
+            case GLFW_KEY_F11: {
+                appToggleFullscreen();
+            } break;
+
+            case GLFW_KEY_ESCAPE: {
+                appExit();
+            } break;
+
+            case GLFW_KEY_F1: {
+                camMode = !camMode;
+            } break;
+
+            case GLFW_KEY_R: {
+                shaderReload("water", app.waterShader);
+            } break;
+
+            case GLFW_KEY_F2: {
+                transformSetDefaults(&g_Camera.transform);
+            } break;
+
+            case GLFW_KEY_F3: {
+                g_RenderGizmos = !g_RenderGizmos;
+            } break;
         }
     }
 
@@ -372,9 +410,9 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 }
 
 static void initUBO(Ublock** ubo, char* name, u32 size) {
-    *ubo = ublockGetByName(name);
+    *ubo = uboGetByName(name);
     u32 buffer = bufferCreate(NULL, size);
-    ublockBindBuffer(*ubo, buffer);
+    uboBindBuffer(*ubo, buffer);
 }
 
 static void opengl_debug_callback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* message, const void* userParam) {
@@ -519,18 +557,24 @@ int appInit() {
     initUBO(&app.modelUBO, "Model", sizeof(mat4));
     initUBO(&app.appUBO, "Application", sizeof(f32) * 4);
     bufferViewportSizeToUBO((f32[2]){w,h});
-    
-    { // materials UBO
-        // Ublock* ubo = ublockGetByName("Material");
-        // vec4 data[3] = {
-        //     { 1, 0, 0, 1 },
-        //     { 0, 1, 0, 1 },
-        //     { 0, 0, 1, 1 }
-        // };
-        // u32 buffer = bufferCreate(data, sizeof(data));
-        // ublockBindBuffer(ubo, buffer);
+
+    { // waves UBO
+        u32 ubosize = sizeof(vec4) * 3;
+        g_WavesUBO = bufferCreate(g_Waves, ubosize);
+        uboBindBuffer(uboGetByName("Waves"), g_WavesUBO);
     }
-    
+
+    { // sun UBO
+        vec4 data[2];
+        data[0].xyz = g_SunDirection;
+        vec3Normalize(&data[0].xyz);
+        data[1].xyz = (vec3) { 4, 4, 4 };
+
+        app.sunUBO = uboGetByName("Sun");
+        u32 buffer = bufferCreate(data, sizeof(data));
+        uboBindBuffer(app.sunUBO, buffer);
+    }
+
     //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LEQUAL);
@@ -648,8 +692,22 @@ static void drawframe() {
 
         u32 shipCount = listLength(g_Ships);
         for (u32 i = 0; i < shipCount; i++) {
-            bufferInit(app.modelUBO->bufferId, &g_Ships[i].modelMatrix, sizeof(mat4));
-            meshRender(&g_Ships[i].mesh);    
+            Ship* ship = &g_Ships[i];
+            bufferInit(app.modelUBO->bufferId, &ship->modelMatrix, sizeof(mat4));
+            meshRender(&ship->mesh);
+
+            mat4 sailMatrix = ship->modelMatrix;
+            for (u32 c = 0; c < ship->sailsCount; c++) {
+                vec3 sailPos = ship->sails[c].pos;
+                sailMatrix.pos.xyz = v3add(ship->modelMatrix.pos.xyz, v3add(
+                    v3scale(sailMatrix.forward.xyz, sailPos.z), 
+                    v3add(
+                        v3scale(sailMatrix.up.xyz, sailPos.y),
+                        v3scale(sailMatrix.right.xyz, sailPos.x))));
+
+                bufferInit(app.modelUBO->bufferId, &sailMatrix, sizeof(mat4));
+                meshRender(&ship->sails[c].mesh);
+            }
         }
 
 
@@ -756,14 +814,33 @@ static void updateInput() {
     }
 }
 
-OBJ* getObjByIndex(OBJ* obj, u32 index) {
+// TODO: move this to obj file
+static OBJ* getObjByIndex(OBJ* obj, u32 index) {
     while (index) {
         obj = obj->next;
         index--;
     }
     return obj;
 }
+static u32 objChildCount(OBJ* obj) {
+    u32 i = 0;
+    obj = obj->child;
+    while (obj) {
+        i++;
+        obj = obj->next;
+    }
+    return i;
+}
 
+
+static void objGetMesh(OBJ* obj, Mesh* mesh) {
+    MeshData data;
+    objToSmoothShadedMesh(obj, &data);
+    meshFromData(&data, mesh);
+
+    free(data.vertices);
+    free(data.indices);
+}
 
 int main() {
 
@@ -829,12 +906,9 @@ int main() {
         OBJ* cobj = obj;
         while (cobj) {
             
-            MeshData data;
-            objToSmoothShadedMesh(cobj, &data);
             
             Ship ship = {0};
             ship.rb.mass = 1;
-            meshFromData(&data, &ship.mesh);
             transformSetDefaults(&ship.transform);
             // ship.transform.position = (vec3) { i * 10, 10, 0 };
             ship.transform.position = cobj->position;
@@ -844,10 +918,20 @@ int main() {
 
             transformToMatrix(&ship.transform, &ship.modelMatrix);
 
-            listAdd(g_Ships, ship);
+            objGetMesh(cobj, &ship.mesh);
 
-            free(data.vertices);
-            free(data.indices);
+            ship.sailsCount = objChildCount(cobj);
+            ship.sails = malloc(sizeof(Sail) * ship.sailsCount);
+            u32 childIndex = 0;
+            OBJ* child = cobj->child;
+            while (child) {
+                ship.sails[childIndex].pos = child->position;
+                objGetMesh(child, &ship.sails[childIndex].mesh);
+                child = child->next;
+                childIndex++;
+            }
+
+            listAdd(g_Ships, ship);
 
             i++;
 
@@ -858,23 +942,30 @@ int main() {
     }
 
     { // boat
-        OBJ* obj = objLoad("src/models/Boate.obj");
 
-        MeshData data;
-        objToSmoothShadedMesh(obj, &data);
-        
-        objFree(obj);
-
-        Ship ship;
+        Ship ship = {0};
         ship.rb.mass = 1.0f;
 
         transformSetDefaults(&ship.transform);
         ship.transform.position = (vec3) { 40, 4, 0 };
         transformToMatrix(&ship.transform, &ship.modelMatrix);
 
-        meshFromData(&data, &ship.mesh);
-        free(data.vertices);
-        free(data.indices);
+        OBJ* obj = objLoad("src/models/Boate.obj");
+        objGetMesh(obj, &ship.mesh);
+        
+        u32 childCount = objChildCount(obj);
+        ship.sails = malloc(sizeof(Sail) * childCount);
+        ship.sailsCount = childCount;
+        OBJ* child = obj->child;
+        u32 i = 0;
+        while (child) {
+            ship.sails[i].pos = child->position;
+            objGetMesh(child, &ship.sails[i].mesh);
+            child = child->next;
+            i++;
+        }
+        
+        objFree(obj);
 
         listAdd(g_Ships, ship);
         g_PlayerShip = &g_Ships[listLength(g_Ships) - 1];
@@ -949,7 +1040,7 @@ int main() {
             cameraBoatControll();
             if (wasd.y < 0) rbAddForce(&g_PlayerShip->rb, (vec3) {0, 1, 0});
             if (wasd.y > 0) {
-                vec3 force = g_PlayerShip->forward.xyz;
+                vec3 force = g_PlayerShip->modelMatrix.forward.xyz;
                 vec3Scale(&force, app.deltatime * 20.0f);
                 rbAddForce(&g_PlayerShip->rb, force);
             }

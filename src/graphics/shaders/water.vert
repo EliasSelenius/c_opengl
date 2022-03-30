@@ -7,9 +7,11 @@
 
 uniform vec2 u_worldPos;
 
-uniform float u_waveLength = 10.0;
-uniform float u_waveSteepness = 0.5;
-uniform vec2  u_waveDirection = vec2(-1, 1);
+
+layout (std140) uniform Waves {
+    vec4 wave_dir_steepness_length[3];
+};
+
 
 layout (location = 0) in vec3 a_Pos;
 layout (location = 1) in vec3 a_Normal;
@@ -46,6 +48,7 @@ vec3 gerstnerWave(vec2 coord, vec2 waveDir, float waveSteepness, float waveLengt
     );
 }
 
+
 void main() {
     // world pos
     vec4 wpos = vec4(a_Pos, 1);
@@ -56,10 +59,17 @@ void main() {
 
     vec2 coord = wpos.xz;
     // TODO: visualize these wave properties with gizmos
-    wpos.xyz += gerstnerWave(coord, vec2(1, 1), 0.25, 60, tangent, binormal);
-    wpos.xyz += gerstnerWave(coord, vec2(1, 0.6), 0.25, 31, tangent, binormal);
-    wpos.xyz += gerstnerWave(coord, vec2(1, 1.3), 0.25, 18, tangent, binormal);
+    // wpos.xyz += gerstnerWave(coord, vec2(1, 1), 0.25, 60, tangent, binormal);
+    // wpos.xyz += gerstnerWave(coord, vec2(1, 0.6), 0.25, 31, tangent, binormal);
+    // wpos.xyz += gerstnerWave(coord, vec2(1, 1.3), 0.25, 18, tangent, binormal);
 
+    for (int i = 0; i < 3; i++) {
+        wpos.xyz += gerstnerWave(coord,
+            wave_dir_steepness_length[i].xy,
+            wave_dir_steepness_length[i].z,
+            wave_dir_steepness_length[i].w,
+            tangent, binormal);
+    }
  
     // output
     v.fragpos = (camera.view * wpos).xyz;

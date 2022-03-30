@@ -160,6 +160,7 @@ static MTL* mtlLoad(const char* filename) {
     return firstMtl;
 }
 
+
 // TODO: probably should make this a mesh thing
 static void approximateCenterOfMass(OBJ* obj) {
     vec3 center = {0};
@@ -179,6 +180,7 @@ static void approximateCenterOfMass(OBJ* obj) {
     }
 
     center = v3scale(center, 1.0f / div);
+    obj->position = center;
     u32 len = listLength(obj->vertex_positions);
     for (u32 i = 0; i < len; i++) {
         vec3Sub(&obj->vertex_positions[i], center);
@@ -331,6 +333,9 @@ u32 AABBintersects(vec3 aabb1[2], vec3 aabb2[2]) {
 }
 
 static void addChild(OBJ* p, OBJ* c) {
+
+    c->position = v3sub(c->position, p->position);
+
     if (p->child) {
         p = p->child;
         while (p->next) {
