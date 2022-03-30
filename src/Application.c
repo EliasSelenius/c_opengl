@@ -842,6 +842,7 @@ static void objGetMesh(OBJ* obj, Mesh* mesh) {
     free(data.indices);
 }
 
+
 int main() {
 
     if (!appInit()) return -1;
@@ -986,21 +987,24 @@ int main() {
     static f64 targetdelta = 1.0 / 60.0;
     app.time = glfwGetTime();
     app.prevtime = app.time;
-    printf("starting time: %f", app.time);
+    printf("starting time: %f\n", app.time);
 
 
     while (!glfwWindowShouldClose(app.window)) {
 
-        // calc time        
+        // calc time
         app.prevtime = app.time;
         app.time = glfwGetTime();
         app.deltatime = app.time - app.prevtime;
         
         // is deltatime unreasonably large? if so pretend time did'nt move
-        if (app.deltatime > targetdelta * 1.1) {
-            glfwSetTime(app.prevtime);
-            app.time = glfwGetTime();
-            app.deltatime = 0;
+        if (app.deltatime > targetdelta * 2) {
+            static u32 skips = 0;
+            printf("%d. recalc deltatime, from %fms\n", ++skips, app.deltatime * 1000);
+
+            app.deltatime = targetdelta;
+            app.time = app.prevtime + targetdelta;
+            glfwSetTime(app.time);
         }
         
         // tell the GPU about time 
