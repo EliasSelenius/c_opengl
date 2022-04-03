@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../types.h"
+#include "../prelude.h"
 
 
 typedef union vec2 {
@@ -37,7 +37,12 @@ typedef union mat4 {
     // NOTE: m[row][col]
     f32 m[4][4];
     struct { vec4 row1, row2, row3, row4; };
-    struct { vec4 right, up, forward, pos; };
+    struct { 
+        vec3 right;     f32 right_w;
+        vec3 up;        f32 up_w;
+        vec3 forward;   f32 forward_w;
+        vec3 pos;       f32 pos_w;
+    };
 } mat4;
 
 STATIC_ASSERT(sizeof(mat4) == sizeof(f32) * 16, "Unexpected byte size of mat4.");

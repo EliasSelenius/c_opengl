@@ -1,6 +1,6 @@
 #include <GL.h>
 #include "Application.h"
-#include "types.h"
+#include "prelude.h"
 #include "fileIO.h"
 #include "String.h"
 #include "List.h"
@@ -23,6 +23,23 @@
 #include "Physics.h"
 
 #include <assert.h>
+
+static char* g_TimerName = null;
+static f64 g_TimerStart = 0.0;
+static void startTimer(char* name) {
+    if (g_TimerName) return;
+    g_TimerName = name;
+    g_TimerStart = glfwGetTime();
+}
+static void endTimer() {
+    f64 now = glfwGetTime();
+
+    if (!g_TimerName) return;
+
+    f64 elapsed = now - g_TimerStart;
+    printf("Timer: %s, %fms\n", g_TimerName, elapsed * 1000.0);
+    g_TimerName = null;
+}
 
 
 Application app;
@@ -181,8 +198,8 @@ typedef struct Ship {
     Transform transform;
     Rigidbody rb;
     Mesh mesh;
-    vec3 boundingbox[2];
 
+    u32 sailsUnfurled;
     u32 sailsCount;
     Sail* sails;    
 
@@ -226,11 +243,9 @@ static void updateShip(Ship* ship) {
             f32 dist = water - o.y;
             
             { // gizmo
-
                 gizmoColor(0.8f, 0.8f, 0.8f);
                 gizmoPoint(o);
-                
-                
+                                
                 vec3 w = o;
                 w.y += dist;
                 gizmoColor(0, 0, 1);
@@ -279,14 +294,10 @@ static void updateShip(Ship* ship) {
         vec3Add(&ship->rb.angularVelocity, f);
     }
 
-    {
-        gizmoColor(0.1f, 0.5f, 0.8f);
-        vec3 p = ship->boundingbox[0];
-        mat4MulVec3(&p, &ship->modelMatrix);
-        gizmoPoint(p);
-        p = ship->boundingbox[1];
-        mat4MulVec3(&p, &ship->modelMatrix);
-        gizmoPoint(p);
+    if (ship->sailsUnfurled) {
+        vec3 force = ship->modelMatrix.forward;
+        force = v3scale(force, app.deltatime * 15.0);
+        rbAddForce(&ship->rb, force);
     }
 }
 
@@ -402,6 +413,16 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 
             case GLFW_KEY_F3: {
                 g_RenderGizmos = !g_RenderGizmos;
+            } break;
+
+            case GLFW_KEY_E: {
+                g_PlayerShip->sailsUnfurled = !g_PlayerShip->sailsUnfurled;
+            } break;
+
+            case GLFW_KEY_Q: {
+                static u32 shipIndex = 0;
+                g_PlayerShip = &g_Ships[shipIndex++];
+                if (shipIndex == listLength(g_Ships)) shipIndex = 0;
             } break;
         }
     }
@@ -676,6 +697,7 @@ static void cameraFlyControll() {
 
 
 static void drawframe() {
+
     glClearColor(0,0,0, 1);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     
@@ -696,17 +718,19 @@ static void drawframe() {
             bufferInit(app.modelUBO->bufferId, &ship->modelMatrix, sizeof(mat4));
             meshRender(&ship->mesh);
 
-            mat4 sailMatrix = ship->modelMatrix;
-            for (u32 c = 0; c < ship->sailsCount; c++) {
-                vec3 sailPos = ship->sails[c].pos;
-                sailMatrix.pos.xyz = v3add(ship->modelMatrix.pos.xyz, v3add(
-                    v3scale(sailMatrix.forward.xyz, sailPos.z), 
-                    v3add(
-                        v3scale(sailMatrix.up.xyz, sailPos.y),
-                        v3scale(sailMatrix.right.xyz, sailPos.x))));
+            if (ship->sailsUnfurled) {
+                mat4 sailMatrix = ship->modelMatrix;
+                for (u32 c = 0; c < ship->sailsCount; c++) {
+                    vec3 sailPos = ship->sails[c].pos;
+                    sailMatrix.pos = v3add(ship->modelMatrix.pos, v3add(
+                        v3scale(sailMatrix.forward, sailPos.z), 
+                        v3add(
+                            v3scale(sailMatrix.up, sailPos.y),
+                            v3scale(sailMatrix.right, sailPos.x))));
 
-                bufferInit(app.modelUBO->bufferId, &sailMatrix, sizeof(mat4));
-                meshRender(&ship->sails[c].mesh);
+                    bufferInit(app.modelUBO->bufferId, &sailMatrix, sizeof(mat4));
+                    meshRender(&ship->sails[c].mesh);
+                }
             }
         }
 
@@ -791,6 +815,7 @@ static void drawframe() {
 
 
     gizmoDispatch();
+
 }
 
 
@@ -911,16 +936,12 @@ int main() {
             Ship ship = {0};
             ship.rb.mass = 1;
             transformSetDefaults(&ship.transform);
-            // ship.transform.position = (vec3) { i * 10, 10, 0 };
             ship.transform.position = cobj->position;
-
-            ship.boundingbox[0] = cobj->boundingbox[0];
-            ship.boundingbox[1] = cobj->boundingbox[1];
-
             transformToMatrix(&ship.transform, &ship.modelMatrix);
 
             objGetMesh(cobj, &ship.mesh);
 
+            ship.sailsUnfurled = false;
             ship.sailsCount = objChildCount(cobj);
             ship.sails = malloc(sizeof(Sail) * ship.sailsCount);
             u32 childIndex = 0;
@@ -955,6 +976,7 @@ int main() {
         objGetMesh(obj, &ship.mesh);
         
         u32 childCount = objChildCount(obj);
+        ship.sailsUnfurled = false;
         ship.sails = malloc(sizeof(Sail) * childCount);
         ship.sailsCount = childCount;
         OBJ* child = obj->child;
@@ -969,7 +991,7 @@ int main() {
         objFree(obj);
 
         listAdd(g_Ships, ship);
-        g_PlayerShip = &g_Ships[listLength(g_Ships) - 1];
+        g_PlayerShip = &g_Ships[listLength(g_Ships) - 10];
     }
 
     
@@ -981,7 +1003,6 @@ int main() {
         free(planeData.indices);
         free(planeData.vertices);
     }
-    
     
 
     static f64 targetdelta = 1.0 / 60.0;
@@ -1042,13 +1063,8 @@ int main() {
             cameraFlyControll();
         } else {
             cameraBoatControll();
-            if (wasd.y < 0) rbAddForce(&g_PlayerShip->rb, (vec3) {0, 1, 0});
-            if (wasd.y > 0) {
-                vec3 force = g_PlayerShip->modelMatrix.forward.xyz;
-                vec3Scale(&force, app.deltatime * 20.0f);
-                rbAddForce(&g_PlayerShip->rb, force);
-            }
-            vec3Add(&g_PlayerShip->rb.angularVelocity, (vec3) { 0, -wasd.x * app.deltatime, 0 });
+            if (wasd.y < 0) rbAddForce(&g_PlayerShip->rb, (vec3) {0, 1, 0});            
+            vec3Add(&g_PlayerShip->rb.angularVelocity, (vec3) { 0, -wasd.x * app.deltatime * 5.0, 0 });
         }
                 
         drawframe();

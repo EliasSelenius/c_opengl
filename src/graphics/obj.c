@@ -447,12 +447,12 @@ OBJ* objLoad(const char* filename) {
     }
 
     { // print material lib
-        printf("Materials: (%s)\n", filename);
-        MTL* mtl = res->mtllib;
-        while (mtl) {
-            printf("  %s\n", mtl->name);
-            mtl = mtl->next;
-        }
+        // printf("Materials: (%s)\n", filename);
+        // MTL* mtl = res->mtllib;
+        // while (mtl) {
+        //     printf("  %s\n", mtl->name);
+        //     mtl = mtl->next;
+        // }
     }
 
     return res;
