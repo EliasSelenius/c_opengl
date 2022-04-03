@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../types.h"
+#include "../prelude.h"
 #include <math.h>
 
 #define PI 3.14159265359

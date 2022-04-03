@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../math/vec.h"
-#include "../types.h"
+#include "../prelude.h"
 
 typedef struct Material {
     vec3 albedo;

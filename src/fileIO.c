@@ -1,5 +1,5 @@
 #include "fileIO.h"
-#include "types.h"
+#include "prelude.h"
 
 #include <stdio.h>
 #include <stdlib.h>

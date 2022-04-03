@@ -1,6 +1,6 @@
 #pragma once 
 
-#include "../types.h"
+#include "../prelude.h"
 #include "structs.h"
 
 void quatMul(quat* left, quat* right, quat* out_result);

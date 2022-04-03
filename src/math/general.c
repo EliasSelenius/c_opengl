@@ -1,5 +1,5 @@
 #include "general.h"
-#include "../types.h"
+#include "../prelude.h"
 #include "vec.h"
 
 f32 random(i32 seed) {

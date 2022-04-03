@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../math/matrix.h"
-#include "../types.h"
+#include "../prelude.h"
 #include "../math/Transform.h"
 
 typedef struct Camera {
