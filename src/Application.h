@@ -8,6 +8,7 @@
 typedef struct Application {
     GLFWwindow* window;
     u32 width, height;
+    f32 aspectRatio;
 
     u32 gizmoShader;
     u32 waterShader;

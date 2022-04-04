@@ -2,7 +2,7 @@
 #include "../math/matrix.h"
 #include "../Application.h"
 #include "glUtils.h"
-
+#include "../math/general.h"
 
 void cameraInit(Camera* cam, f32 fov, f32 near, f32 far) {
     transformSetDefaults(&cam->transform);
@@ -10,6 +10,9 @@ void cameraInit(Camera* cam, f32 fov, f32 near, f32 far) {
     cam->fieldOfView = fov;
     cam->nearPlane = near;
     cam->farPlane = far;
+
+    cam->nearPlaneHeight = near / (tan(HALF_PI - fov / 2.0));
+    cam->nearPlaneWidth = cam->nearPlaneHeight * app.aspectRatio;
 
     mat4SetIdentity(&cam->view);
     mat4SetIdentity(&cam->projection);
@@ -20,9 +23,7 @@ void cameraInit(Camera* cam, f32 fov, f32 near, f32 far) {
 */
 void cameraUpdateMatrices(Camera* cam) {
     // projection
-    int w, h;
-    glfwGetFramebufferSize(app.window, &w, &h);
-    mat4Perspective(cam->fieldOfView, (f32)w / h, cam->nearPlane, cam->farPlane, &cam->projection);
+    mat4Perspective(cam->fieldOfView, app.aspectRatio, cam->nearPlane, cam->farPlane, &cam->projection);
 
     // view
     transformToMatrix(&cam->transform, &cam->view);
@@ -70,4 +71,24 @@ void cameraUse(Camera* cam) {
 
     bufferSubData(app.sunUBO->bufferId, 0, &ld, sizeof(ld));
     
+}
+
+vec3 cameraRay(Camera* cam, vec2 ndc) {
+    vec3 ray = {0};
+
+    // NOTE: the first, second and third columns of the cameras view matrix is the side, up and forward vectors respectively.
+
+    ray.x = -cam->view.row1.z * cam->nearPlane;
+    ray.y = -cam->view.row2.z * cam->nearPlane;
+    ray.z = -cam->view.row3.z * cam->nearPlane;
+
+    ray.x += cam->view.row1.y * cam->nearPlaneHeight * ndc.y;
+    ray.y += cam->view.row2.y * cam->nearPlaneHeight * ndc.y;
+    ray.z += cam->view.row3.y * cam->nearPlaneHeight * ndc.y;
+
+    ray.x += cam->view.row1.x * cam->nearPlaneWidth * ndc.x;
+    ray.y += cam->view.row2.x * cam->nearPlaneWidth * ndc.x;
+    ray.z += cam->view.row3.x * cam->nearPlaneWidth * ndc.x;
+
+    return v3normalize(ray);
 }

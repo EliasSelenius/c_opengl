@@ -323,7 +323,10 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
 
     app.width = width;
     app.height = height;
-    
+    app.aspectRatio = (f32)app.width / (f32)app.height;
+
+    g_Camera.nearPlaneWidth = g_Camera.nearPlaneHeight * app.aspectRatio;
+
     glViewport(0, 0, width, height);
     framebufferResize(app.fbo, width, height);
     framebufferResize(app.gBuffer, width, height);
@@ -526,6 +529,7 @@ int appInit() {
     
 	app.width = 1600;
     app.height = 900;
+    app.aspectRatio = 16.0 / 9.0;
     app.window = glfwCreateWindow(app.width, app.height, "Test window", NULL, NULL);
     if (!app.window) {
         glfwTerminate();
@@ -622,7 +626,7 @@ int appInit() {
 
         
     // Camera
-    cameraInit(&g_Camera, 3.14 / 2.0, 0.1, 1000.0);
+    cameraInit(&g_Camera, 90.0 * deg2rad, 0.1, 1000.0);
     cameraUse(&g_Camera);
     
     { // load properties
@@ -838,10 +842,6 @@ static void drawframe() {
         glDrawArrays(GL_TRIANGLES, 0, 6);
     }
     endPerfTimer();
-
-
-    gizmoDispatch();
-
 }
 
 
@@ -865,6 +865,7 @@ static void updateInput() {
     }
 }
 
+
 // TODO: move this to obj file
 static OBJ* getObjByIndex(OBJ* obj, u32 index) {
     while (index) {
@@ -883,7 +884,6 @@ static u32 objChildCount(OBJ* obj) {
     return i;
 }
 
-
 static void objGetMesh(OBJ* obj, Mesh* mesh) {
     MeshData data;
     objToSmoothShadedMesh(obj, &data);
@@ -893,6 +893,12 @@ static void objGetMesh(OBJ* obj, Mesh* mesh) {
     free(data.indices);
 }
 
+static vec2 screen2ndc(f32 coord_x, f32 coord_y) {
+    f32 x = ((coord_x / (app.width-1)) - 0.5) * 2.0;
+    f32 y = ((coord_y / (app.height-1)) - 0.5) * 2.0;
+
+    return (vec2) { x, -y };
+} 
 
 int main() {
 
@@ -1049,8 +1055,8 @@ int main() {
 
 
         updateInput();
-        
 
+        
         { // render wave points
             for (u32 x = 0; x < 20; x++) {
                 for (u32 z = 0; z < 20; z++) {
@@ -1081,11 +1087,24 @@ int main() {
         }
                 
         drawframe();
+
+        { // ray
+            vec3 ray = cameraRay(&g_Camera, screen2ndc(mouse_x, mouse_y));
+            ray = v3scale(ray, 10);
+            ray = v3add(ray, g_Camera.transform.position);
+            
+            gizmoColor(0.1, 0.6, 0.2);
+            gizmoPoint(ray);
+        }
+
+        gizmoDispatch();
+        
+        
         mouse_scroll = 0.0f;
 
 
-        printf("PerfTimer Stats:\n");
-        printf("%s", g_TimerBuffer);
+        // printf("PerfTimer Stats:\n");
+        // printf("%s", g_TimerBuffer);
         g_TimerBufferIndex = 0;
 
         glfwSwapBuffers(app.window);

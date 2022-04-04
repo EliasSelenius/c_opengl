@@ -31,3 +31,4 @@ inline vec3 v3sub(vec3 a, vec3 b) { return (vec3) { a.x - b.x, a.y - b.y, a.z - 
 inline vec3 v3mul(vec3 a, vec3 b) { return (vec3) { a.x * b.x, a.y * b.y, a.z * b.z }; }
 inline vec3 v3scale(vec3 a, f32 s) { return (vec3) { a.x * s, a.y * s, a.z * s }; }
 inline f32 v3length(vec3 a) { return sqrtf(a.x * a.x + a.y * a.y + a.z * a.z); }
+inline vec3 v3normalize(vec3 a) { f32 l = v3length(a); return (vec3) { a.x / l, a.y / l, a.z / l }; }
