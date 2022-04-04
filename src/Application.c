@@ -24,20 +24,26 @@
 
 #include <assert.h>
 
+static u32 g_TimerBufferIndex;
+static char g_TimerBuffer[256];
 static char* g_TimerName = null;
 static f64 g_TimerStart = 0.0;
-static void startTimer(char* name) {
+static void startPerfTimer(char* name) {
     if (g_TimerName) return;
     g_TimerName = name;
     g_TimerStart = glfwGetTime();
 }
-static void endTimer() {
+static void endPerfTimer() {
     f64 now = glfwGetTime();
 
     if (!g_TimerName) return;
 
     f64 elapsed = now - g_TimerStart;
-    printf("Timer: %s, %fms\n", g_TimerName, elapsed * 1000.0);
+    // printf("Timer: %s, %fms\n", g_TimerName, elapsed * 1000.0);
+    g_TimerBufferIndex += sprintf(g_TimerBuffer + g_TimerBufferIndex, 
+        "    %s, %fms\n", 
+        g_TimerName, elapsed * 1000.0);
+
     g_TimerName = null;
 }
 
@@ -424,6 +430,16 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
                 g_PlayerShip = &g_Ships[shipIndex++];
                 if (shipIndex == listLength(g_Ships)) shipIndex = 0;
             } break;
+
+            case GLFW_KEY_T: {
+                if (mods & GLFW_MOD_SHIFT) {
+                    app.simSpeed -= 0.1;
+                } else if (mods & GLFW_MOD_CONTROL) {
+                    app.simSpeed = 1.0;
+                } else {
+                    app.simSpeed += 0.1;
+                }
+            } break;
         }
     }
 
@@ -703,6 +719,7 @@ static void drawframe() {
     
     cameraUse(&g_Camera);
 
+    startPerfTimer("gPass");
     { // geometry pass
         glBindFramebuffer(GL_FRAMEBUFFER, app.gBuffer->id);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -748,13 +765,17 @@ static void drawframe() {
             gizmoPoint(vpos);
         }
     }
+    endPerfTimer();
 
+    startPerfTimer("fbo blit");
     glBindFramebuffer(GL_READ_FRAMEBUFFER, app.gBuffer->id);
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, app.hdrBuffer->id);
     glBlitFramebuffer(0, 0, app.width, app.height,
                       0, 0, app.width, app.height,
                       GL_DEPTH_BUFFER_BIT, GL_NEAREST);
+    endPerfTimer();
 
+    startPerfTimer("light pass");
     { // light pass
         glBindFramebuffer(GL_FRAMEBUFFER, app.hdrBuffer->id);
         glClear(GL_COLOR_BUFFER_BIT);
@@ -778,7 +799,9 @@ static void drawframe() {
         glDrawArrays(GL_TRIANGLES, 0, 6); // draw screen covering quad
 
     }
+    endPerfTimer();
 
+    startPerfTimer("water rendering");
     { // water
         glUseProgram(app.waterShader);
 
@@ -798,7 +821,9 @@ static void drawframe() {
 
         meshRender(&g_waterPlane);
     }
+    endPerfTimer();
 
+    startPerfTimer("screen pass (hdr -> ldr)");
     { // draw to screen (hdr -> ldr)
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
@@ -812,6 +837,7 @@ static void drawframe() {
         
         glDrawArrays(GL_TRIANGLES, 0, 6);
     }
+    endPerfTimer();
 
 
     gizmoDispatch();
@@ -1007,27 +1033,14 @@ int main() {
 
     static f64 targetdelta = 1.0 / 60.0;
     app.time = glfwGetTime();
-    app.prevtime = app.time;
-    printf("starting time: %f\n", app.time);
-
+    app.simSpeed = 1.0;
 
     while (!glfwWindowShouldClose(app.window)) {
 
-        // calc time
-        app.prevtime = app.time;
-        app.time = glfwGetTime();
-        app.deltatime = app.time - app.prevtime;
-        
-        // is deltatime unreasonably large? if so pretend time did'nt move
-        if (app.deltatime > targetdelta * 2) {
-            static u32 skips = 0;
-            printf("%d. recalc deltatime, from %fms\n", ++skips, app.deltatime * 1000);
+        app.deltatime = targetdelta * app.simSpeed;
+        app.time += app.deltatime;
 
-            app.deltatime = targetdelta;
-            app.time = app.prevtime + targetdelta;
-            glfwSetTime(app.time);
-        }
-        
+
         // tell the GPU about time 
         f32 time = app.time;
         glBindBuffer(GL_ARRAY_BUFFER, app.appUBO->bufferId);
@@ -1069,6 +1082,11 @@ int main() {
                 
         drawframe();
         mouse_scroll = 0.0f;
+
+
+        printf("PerfTimer Stats:\n");
+        printf("%s", g_TimerBuffer);
+        g_TimerBufferIndex = 0;
 
         glfwSwapBuffers(app.window);
         glfwPollEvents();

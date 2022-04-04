@@ -27,7 +27,9 @@ typedef struct Application {
     Ublock* modelUBO;
     Ublock* sunUBO;
 
-    f64 time, prevtime, deltatime;
+    f64 time;
+    f64 deltatime;
+    f64 simSpeed;
     
 } Application;
 
