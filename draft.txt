@@ -5,6 +5,7 @@ high-level todos:
     - cloth physics for sails and flags/banners
     - fish boids
     - sea-serpent procedural animation
+    - asset packager
 
     Graphics:
     - water splash particles

@@ -347,6 +347,32 @@ static void addChild(OBJ* p, OBJ* c) {
     }
 }
 
+void objGetMesh(OBJ* obj, Mesh* mesh) {
+    MeshData data;
+    objToSmoothShadedMesh(obj, &data);
+    meshFromData(&data, mesh);
+
+    free(data.vertices);
+    free(data.indices);
+}
+
+OBJ* objGetByIndex(OBJ* obj, u32 index) {
+    while (index) {
+        obj = obj->next;
+        index--;
+    }
+    return obj;
+}
+u32 objChildCount(OBJ* obj) {
+    u32 i = 0;
+    obj = obj->child;
+    while (obj) {
+        i++;
+        obj = obj->next;
+    }
+    return i;
+}
+
 static u32 lastIndexOf(const char* string, char c) {
     u32 res = 0;
     u32 i = 0;

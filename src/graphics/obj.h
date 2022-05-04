@@ -58,3 +58,7 @@ void objFree(OBJ* obj);
 void objToFlatShadedMesh(OBJ* obj, MeshData* out_data);
 void objToSmoothShadedMesh(OBJ* obj, MeshData* out_data);
 void objToMesh(OBJ* obj, u32 normal_threshold_angle, MeshData* out_data);
+
+u32 objChildCount(OBJ* obj);
+OBJ* objGetByIndex(OBJ* obj, u32 index);
+void objGetMesh(OBJ* obj, Mesh* mesh);

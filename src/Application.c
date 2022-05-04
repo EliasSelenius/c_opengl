@@ -58,22 +58,50 @@ vec2 wasd;
 
 vec3 g_SunDirection = { 1, 3, 1 };
 
-static Mesh g_waterPlane;
 
-static u32 g_WavesUBO;
-static vec4 g_Waves[3] = {
-    { 1, 1,     0.25f,   60 },
-    { 1, 0.6,   0.25f,   31 },
-    { 1, 1.3,   0.25f,   18 }
+// ------------Ocean------------------------------------------------------------------------------------------------------------------------------------------------
+
+typedef struct Wave {
+    vec2 dir;
+    f32 steepness;
+    f32 length;
+} Wave;
+
+typedef struct Ocean {
+    Mesh mesh;
+    u32 wavesUBO;
+    Wave waves[3];
+} Ocean;
+
+static Ocean ocean = {
+    .waves = {
+        (Wave) { 
+            .dir = (vec2){1, 1},   
+            .steepness = .25f,  
+            .length = 60
+        },
+        
+        (Wave) { 
+            .dir = (vec2){1, 0.6}, 
+            .steepness = 0.25f,  
+            .length = 31
+        },
+        
+        (Wave) { 
+            .dir = (vec2){1, 1.3}, 
+            .steepness = 0.25f, 
+            .length = 18
+        }
+    }
 };
 
-static vec3 gerstnerWave(vec2 coord, vec2 waveDir, float waveSteepness, float waveLength) {
-    float k = 2.0 * PI / waveLength;
+static vec3 gerstnerWave(vec2 coord, Wave wave) {
+    float k = 2.0 * PI / wave.length;
     float c = sqrt(9.8 / k);
-    vec2 d = waveDir;
+    vec2 d = wave.dir;
     vec2Normalize(&d);
     float f = k * (vec2Dot(d, coord) - c * app.time);
-    float a = waveSteepness / k;
+    float a = wave.steepness / k;
 
     return (vec3) {
         d.x * cos(f) * a,
@@ -85,16 +113,9 @@ static vec3 gerstnerWave(vec2 coord, vec2 waveDir, float waveSteepness, float wa
 
 static vec3 wave(vec2 coord) {
     vec3 res = {0};
-    // vec3Add(&res, gerstnerWave(coord, (vec2) {1, 1}, 0.25f, 60));
-    // vec3Add(&res, gerstnerWave(coord, (vec2) {1, 0.6}, 0.25f, 31));
-    // vec3Add(&res, gerstnerWave(coord, (vec2) {1, 1.3}, 0.25f, 18));
 
     for (u32 i = 0; i < 3; i++) {
-        vec3Add(&res, gerstnerWave(coord, 
-            g_Waves[i].xy,
-            g_Waves[i].z,
-            g_Waves[i].w
-        ));
+        res = v3add(res, gerstnerWave(coord, ocean.waves[i]));
     }
     
     return res;
@@ -115,6 +136,8 @@ static f32 approximateWaveHeight(f32 xcoord, f32 ycoord) {
     return wave(samplePoint).y;
 }
 
+
+// ---------------Gizmo-------------------------------------------------------------------------------------------------------------------
 
 typedef struct GizmoPoint {
     vec3 pos;
@@ -183,14 +206,7 @@ void gizmoLine(vec3 start, vec3 end) {
 
 
 
-
-typedef struct ShipType {
-    Mesh mesh;
-
-    vec3* buoyantPoints;
-    u32 buoyantPointsLength;
-
-} ShipType;
+// ------------------Ships------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 
 typedef struct Sail {
@@ -198,17 +214,23 @@ typedef struct Sail {
     vec3 pos;
 } Sail;
 
+typedef struct ShipType {
+    Mesh mesh;
+    u32 sailsCount;
+    Sail* sails;
+    
+    vec3* buoyantPoints;
+    u32 buoyantPointsLength;
+
+} ShipType;
+
 typedef struct Ship {
 
-    //ShipType* shipType;
+    ShipType* shipType;
     Transform transform;
     Rigidbody rb;
-    Mesh mesh;
-
     u32 sailsUnfurled;
-    u32 sailsCount;
-    Sail* sails;    
-
+    
     // NOTE: model matrix is always orthonormalized, as we only use position and rotation
     mat4 modelMatrix;
 } Ship;
@@ -259,7 +281,7 @@ static void updateShip(Ship* ship) {
             }
             
             if (o.y < water) {
-
+                // TODO: calc center of buoancy, instead of all this
                 vec3 offset = offsets[i];
                 { // make offset be local to rb rotation
                     mat4 m = ship->modelMatrix;
@@ -307,6 +329,9 @@ static void updateShip(Ship* ship) {
     }
 }
 
+
+
+// -------------------------Renderer & Input----------------------------------------------------------------------------------------------------------------------------------
 
 static void bufferViewportSizeToUBO(f32 res[2]) {
     glBindBuffer(GL_ARRAY_BUFFER, app.appUBO->bufferId);
@@ -600,9 +625,9 @@ int appInit() {
     bufferViewportSizeToUBO((f32[2]){w,h});
 
     { // waves UBO
-        u32 ubosize = sizeof(vec4) * 3;
-        g_WavesUBO = bufferCreate(g_Waves, ubosize);
-        uboBindBuffer(uboGetByName("Waves"), g_WavesUBO);
+        u32 ubosize = sizeof(ocean.waves) * 3;
+        ocean.wavesUBO = bufferCreate(ocean.waves, ubosize);
+        uboBindBuffer(uboGetByName("Waves"), ocean.wavesUBO);
     }
 
     { // sun UBO
@@ -737,12 +762,12 @@ static void drawframe() {
         for (u32 i = 0; i < shipCount; i++) {
             Ship* ship = &g_Ships[i];
             bufferInit(app.modelUBO->bufferId, &ship->modelMatrix, sizeof(mat4));
-            meshRender(&ship->mesh);
+            meshRender(&ship->shipType->mesh);
 
             if (ship->sailsUnfurled) {
                 mat4 sailMatrix = ship->modelMatrix;
-                for (u32 c = 0; c < ship->sailsCount; c++) {
-                    vec3 sailPos = ship->sails[c].pos;
+                for (u32 c = 0; c < ship->shipType->sailsCount; c++) {
+                    vec3 sailPos = ship->shipType->sails[c].pos;
                     sailMatrix.pos = v3add(ship->modelMatrix.pos, v3add(
                         v3scale(sailMatrix.forward, sailPos.z), 
                         v3add(
@@ -750,7 +775,7 @@ static void drawframe() {
                             v3scale(sailMatrix.right, sailPos.x))));
 
                     bufferInit(app.modelUBO->bufferId, &sailMatrix, sizeof(mat4));
-                    meshRender(&ship->sails[c].mesh);
+                    meshRender(&ship->shipType->sails[c].mesh);
                 }
             }
         }
@@ -823,7 +848,7 @@ static void drawframe() {
             round(g_Camera.transform.position.x),
             round(g_Camera.transform.position.z));
 
-        meshRender(&g_waterPlane);
+        meshRender(&ocean.mesh);
     }
     endPerfTimer();
 
@@ -866,39 +891,6 @@ static void updateInput() {
 }
 
 
-// TODO: move this to obj file
-static OBJ* getObjByIndex(OBJ* obj, u32 index) {
-    while (index) {
-        obj = obj->next;
-        index--;
-    }
-    return obj;
-}
-static u32 objChildCount(OBJ* obj) {
-    u32 i = 0;
-    obj = obj->child;
-    while (obj) {
-        i++;
-        obj = obj->next;
-    }
-    return i;
-}
-
-static void objGetMesh(OBJ* obj, Mesh* mesh) {
-    MeshData data;
-    objToSmoothShadedMesh(obj, &data);
-    meshFromData(&data, mesh);
-
-    free(data.vertices);
-    free(data.indices);
-}
-
-static vec2 screen2ndc(f32 coord_x, f32 coord_y) {
-    f32 x = ((coord_x / (app.width-1)) - 0.5) * 2.0;
-    f32 y = ((coord_y / (app.height-1)) - 0.5) * 2.0;
-
-    return (vec2) { x, -y };
-} 
 
 int main() {
 
@@ -964,23 +956,24 @@ int main() {
         OBJ* cobj = obj;
         while (cobj) {
             
-            
+            ShipType* shipType = malloc(sizeof(ShipType));            
             Ship ship = {0};
+            ship.shipType = shipType;
             ship.rb.mass = 1;
             transformSetDefaults(&ship.transform);
             ship.transform.position = cobj->position;
             transformToMatrix(&ship.transform, &ship.modelMatrix);
 
-            objGetMesh(cobj, &ship.mesh);
+            objGetMesh(cobj, &shipType->mesh);
 
             ship.sailsUnfurled = false;
-            ship.sailsCount = objChildCount(cobj);
-            ship.sails = malloc(sizeof(Sail) * ship.sailsCount);
+            shipType->sailsCount = objChildCount(cobj);
+            shipType->sails = malloc(sizeof(Sail) * shipType->sailsCount);
             u32 childIndex = 0;
             OBJ* child = cobj->child;
             while (child) {
-                ship.sails[childIndex].pos = child->position;
-                objGetMesh(child, &ship.sails[childIndex].mesh);
+                shipType->sails[childIndex].pos = child->position;
+                objGetMesh(child, &shipType->sails[childIndex].mesh);
                 child = child->next;
                 childIndex++;
             }
@@ -995,42 +988,43 @@ int main() {
         objFree(obj);
     }
 
-    { // boat
+    // { // boat
 
-        Ship ship = {0};
-        ship.rb.mass = 1.0f;
+    //     Ship ship = {0};
+    //     ship.rb.mass = 1.0f;
 
-        transformSetDefaults(&ship.transform);
-        ship.transform.position = (vec3) { 40, 4, 0 };
-        transformToMatrix(&ship.transform, &ship.modelMatrix);
+    //     transformSetDefaults(&ship.transform);
+    //     ship.transform.position = (vec3) { 40, 4, 0 };
+    //     transformToMatrix(&ship.transform, &ship.modelMatrix);
 
-        OBJ* obj = objLoad("src/models/Boate.obj");
-        objGetMesh(obj, &ship.mesh);
+    //     OBJ* obj = objLoad("src/models/Boate.obj");
+    //     objGetMesh(obj, &ship.mesh);
         
-        u32 childCount = objChildCount(obj);
-        ship.sailsUnfurled = false;
-        ship.sails = malloc(sizeof(Sail) * childCount);
-        ship.sailsCount = childCount;
-        OBJ* child = obj->child;
-        u32 i = 0;
-        while (child) {
-            ship.sails[i].pos = child->position;
-            objGetMesh(child, &ship.sails[i].mesh);
-            child = child->next;
-            i++;
-        }
+    //     u32 childCount = objChildCount(obj);
+    //     ship.sailsUnfurled = false;
+    //     ship.sails = malloc(sizeof(Sail) * childCount);
+    //     ship.sailsCount = childCount;
+    //     OBJ* child = obj->child;
+    //     u32 i = 0;
+    //     while (child) {
+    //         ship.sails[i].pos = child->position;
+    //         objGetMesh(child, &ship.sails[i].mesh);
+    //         child = child->next;
+    //         i++;
+    //     }
         
-        objFree(obj);
+    //     objFree(obj);
 
-        listAdd(g_Ships, ship);
-        g_PlayerShip = &g_Ships[listLength(g_Ships) - 10];
-    }
+    //     listAdd(g_Ships, ship);
+    //     g_PlayerShip = &g_Ships[listLength(g_Ships) - 10];
+    // }
 
+    g_PlayerShip = &g_Ships[listLength(g_Ships) - 1];
     
     { // water
         MeshData planeData;
         genPlane(&planeData, 1000);
-        meshFromData(&planeData, &g_waterPlane);
+        meshFromData(&planeData, &ocean.mesh);
 
         free(planeData.indices);
         free(planeData.vertices);

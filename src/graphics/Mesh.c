@@ -42,7 +42,7 @@ void meshFromData(MeshData* data, Mesh* out_mesh) {
         out_mesh->drawCount = vertGroups;
 
         out_mesh->groups_count = malloc(sizeof(u32) * vertGroups);
-        out_mesh->groups_start = malloc(sizeof(void*) * vertGroups);
+        out_mesh->groups_start = malloc(sizeof(u64) * vertGroups);
 
         u32 materialDataSize = sizeof(vec4) * vertGroups;
         vec4* materialData = malloc(materialDataSize);
@@ -76,21 +76,6 @@ void meshFromData(MeshData* data, Mesh* out_mesh) {
 
 void meshRender(Mesh* mesh) {
     glBindVertexArray(mesh->vao);
-
-    /*
-    if (mesh->groups) {
-
-        // u32 len = listLength(mesh->groups);
-        // for (u32 i = 0; i < len; i++) {
-        //     VertexGroup g = mesh->groups[i];
-        //     glUniform3f(glGetUniformLocation(app.gPassShader, "u_Color"), i / 3.0f, 1, 1);
-        //     glDrawElements(GL_TRIANGLES, g.count, GL_UNSIGNED_INT, (void*)(g.start * sizeof(u32)));
-        // }
-
-    } else {
-        glDrawElements(GL_TRIANGLES, mesh->elementCount, GL_UNSIGNED_INT, 0);
-    }
-    */
 
 
     uboBindBuffer(uboGetByName("Material"), mesh->materialsBuffer);

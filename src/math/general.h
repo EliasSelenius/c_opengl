@@ -21,6 +21,13 @@ inline f32 clamp(f32 min, f32 max, f32 t) {
     return t > max ? max : t < min ? min : t;
 }
 
+inline vec2 screen2ndc(f32 coord_x, f32 coord_y) {
+    f32 x = ((coord_x / (app.width-1)) - 0.5) * 2.0;
+    f32 y = ((coord_y / (app.height-1)) - 0.5) * 2.0;
+
+    return (vec2) { x, -y };
+}
+
 // Generates a random number in the range [-1..1]
 f32 random(i32 seed);
 f32 random2(i32 seed_x, i32 seed_y);
