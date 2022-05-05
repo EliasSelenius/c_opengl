@@ -39,3 +39,8 @@ extern vec3 g_SunDirection;
 
 void appExit();
 void appToggleFullscreen();
+
+
+void gizmoColor(f32 red, f32 green, f32 blue);
+void gizmoPoint(vec3 pos);
+void gizmoLine(vec3 start, vec3 end);

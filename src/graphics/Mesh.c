@@ -18,6 +18,11 @@ void setupAttribs() {
 
 void meshCreate(u32 vertexCount, vertex* vertices, u32 indexCount, u32* indices, Mesh* out_mesh) {
 
+    out_mesh->materialsBuffer = 0;
+    out_mesh->groups_count = null;
+    out_mesh->groups_start = null;
+    out_mesh->drawCount = indexCount;
+
     out_mesh->vbo = bufferCreate(vertices, sizeof(vertex) * vertexCount);
     out_mesh->ebo = bufferCreate(indices, sizeof(u32) * indexCount);
 
@@ -36,9 +41,11 @@ void meshCreate(u32 vertexCount, vertex* vertices, u32 indexCount, u32* indices,
 
 void meshFromData(MeshData* data, Mesh* out_mesh) {
 
+    meshCreate(data->vertexCount, data->vertices, data->indexCount, data->indices, out_mesh);
+
     if (data->groups) {
         u32 vertGroups = listLength(data->groups);
-        if (vertGroups == 0) goto noGroups;
+        if (vertGroups == 0) return;
         out_mesh->drawCount = vertGroups;
 
         out_mesh->groups_count = malloc(sizeof(u32) * vertGroups);
@@ -62,16 +69,7 @@ void meshFromData(MeshData* data, Mesh* out_mesh) {
         out_mesh->materialsBuffer = bufferCreate(materialData, materialDataSize);
         free(materialData);
 
-    } else {
-        noGroups:
-        out_mesh->materialsBuffer = 0;
-        out_mesh->groups_count = null;
-        out_mesh->groups_start = null;
-        out_mesh->drawCount = data->indexCount;
     }
-
-
-    meshCreate(data->vertexCount, data->vertices, data->indexCount, data->indices, out_mesh);
 }
 
 void meshRender(Mesh* mesh) {

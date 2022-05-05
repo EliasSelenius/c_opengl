@@ -42,3 +42,15 @@ void sbCopyIntoBuffer(StringBuilder* sb, char* buffer, u32 bufferLength);
 char* stringStartsWith(char* text, const char* start);
 
 void stringTrimEnd(char* str, char c);
+
+bool spanEquals(Strview span, char* str);
+bool spanEqualsSpan(Strview span1, Strview span2);
+
+inline bool stringEquals(char* a, char* b) {
+    u32 i = 0;
+    while (true) {
+        if (a[i] != b[i]) return false;
+        if (a[i] == '\0') return true;
+        i++;
+    }
+}

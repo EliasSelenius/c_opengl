@@ -59,6 +59,11 @@ vec2 wasd;
 vec3 g_SunDirection = { 1, 3, 1 };
 
 
+
+static Mesh g_Test_mesh;
+
+
+
 // ------------Ocean------------------------------------------------------------------------------------------------------------------------------------------------
 
 typedef struct Wave {
@@ -780,6 +785,10 @@ static void drawframe() {
             }
         }
 
+        mat4 matrix;
+        mat4SetIdentity(&matrix);
+        bufferInit(app.modelUBO->bufferId, &matrix, sizeof(mat4));
+        meshRender(&g_Test_mesh);
 
         { // test reading from gbuffer
             vec3 vpos;
@@ -890,11 +899,57 @@ static void updateInput() {
     }
 }
 
+typedef struct Model {
+    char name[4]; // TODO: remove this
+    Transform transform;
+    u32 parent_index;
+    
+    u32 vertices_start;
+    u32 vertices_count;
+    u32 indices_start;
+    u32 indices_count;
+
+} Model;
+
+typedef struct Package {
+    Model* models;
+    u32 modelsCount;
+
+    u32 verticesCount;
+    vertex* vertices;
+
+    u32* indices;
+    u32 indicesCount;
+} Package;
+
+void packageCreate();
+Package packageLoad();
+
+void genMeshFromModel(Package* package, Model* model, Mesh* mesh) {
+    meshCreate(
+        model->vertices_count,
+        package->vertices,
+        model->indices_count,
+        package->indices, mesh);    
+}
 
 
-int main() {
+int main(int argc, char* argv[]) {
+
+    if (argc == 2) {
+        if (stringEquals(argv[1], "pack")) {
+            printf("Creating package.\n");
+            packageCreate();
+            return 0;
+        }
+    }
+
+    Package package = packageLoad();
+
 
     if (!appInit()) return -1;
+
+    genMeshFromModel(&package, &package.models[0], &g_Test_mesh);
     
 
     { // Island
@@ -932,24 +987,12 @@ int main() {
 
     }
 
-
-    /*    
-    { // pyramid
-        OBJ* obj = objLoad("src/models/pyramid.obj");
-        
-        MeshData objData;
-        objToFlatShadedMesh(obj, &objData);
-        
-        objFree(obj);
-        
-        Mesh m;
-        meshCreate(objData.vertexCount, objData.vertices, objData.indexCount, objData.indices, &m);
-    } */ 
     
     { // load ships
         g_Ships = listCreate(Ship);
 
         OBJ* obj = objLoad("src/models/Ships.obj");
+        objApproximateNodeGraph(obj);
 
         u32 i = 0;
 
@@ -1050,6 +1093,17 @@ int main() {
 
         updateInput();
 
+        { // test package data
+
+            Model m = package.models[0];
+            // u32 len = m.vertices_start + m.vertices_count;
+            // for (u32 i = m.vertices_start; i < len; i++) {
+            //     gizmoPoint(package.vertices[i].pos);
+            // }
+
+            
+
+        }
         
         { // render wave points
             for (u32 x = 0; x < 20; x++) {

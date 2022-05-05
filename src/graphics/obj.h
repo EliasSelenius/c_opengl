@@ -36,20 +36,9 @@ typedef struct OBJ {
     struct OBJ* next;
 } OBJ;
 
-// typedef struct newOBJ {
-//     vec3* vertex_positions;
-//     vec3* vertex_normals;
-//     face* triangles;
-
-//     struct {
-//         char* name;
-//         u32 start_tri, count_tri;
-//     }* objs;
-
-// } newOBJ;
-
 
 typedef struct MeshData MeshData;
+typedef struct Mesh Mesh;
 
 
 OBJ* objLoad(const char* filename);
@@ -58,6 +47,8 @@ void objFree(OBJ* obj);
 void objToFlatShadedMesh(OBJ* obj, MeshData* out_data);
 void objToSmoothShadedMesh(OBJ* obj, MeshData* out_data);
 void objToMesh(OBJ* obj, u32 normal_threshold_angle, MeshData* out_data);
+
+void objApproximateNodeGraph(OBJ* obj);
 
 u32 objChildCount(OBJ* obj);
 OBJ* objGetByIndex(OBJ* obj, u32 index);

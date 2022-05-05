@@ -1,4 +1,5 @@
 #include "String.h"
+#include "prelude.h"
 
 #include <string.h>
 #include <stdlib.h>
@@ -66,6 +67,20 @@ b8 svStartsWith(Strview sv, char* start) {
         if (start[i] != sv.data[i]) return false;
         i++;
     }
+} 
+
+bool spanEquals(Strview span, char* str) {
+    return spanEqualsSpan(span, svFrom(str));
+}
+
+bool spanEqualsSpan(Strview span1, Strview span2) {
+    if (span1.length != span2.length) return false;
+
+    for (u32 i = 0; i < span1.length; i++) {
+        if (span1.data[i] != span2.data[i]) return false;
+    }
+
+    return true;
 }
 
 void sbInit(StringBuilder* sb) {

@@ -14,6 +14,7 @@ typedef float f32;
 typedef double f64;
 
 typedef char b8;
+typedef char bool;
 
 #define true 1
 #define false 0

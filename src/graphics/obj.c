@@ -14,6 +14,8 @@ void objFree(OBJ* obj) {
     listDelete(obj->vertex_normals);
     listDelete(obj->faces);
 
+    // TODO: delete vertex groups, we can't right now because MeshData uses it.
+
     if (obj->child) objFree(obj->child);
     if (obj->next) objFree(obj->next);
 
@@ -436,50 +438,25 @@ OBJ* objLoad(const char* filename) {
         free(mtllib_name);
     }
 
-    // { // print
-    //     printf("%s\n", filename);
-        
-    //     OBJ* cobj = res;
-    //     u32 i = 0;
-    //     while (cobj) {
-    //         printf("  %d. %s\n", i++, cobj->name);
-    //         cobj = cobj->next;
-    //     }
-    // }
-
-    { // create node graph
-        OBJ* parent = res;
-        OBJ* current = parent->next;
-
-        while (current) {
-            OBJ* next = current->next;
-
-            if (AABBintersects(parent->boundingbox, current->boundingbox)) {
-                current->next = null;
-                addChild(parent, current);
-                parent->next = null;
-            } else {
-                parent->next = current;
-                parent = current;
-            }
-
-            current = next;
-        }
-    }
-
-    { // print node graph
-        // printf("NODE GRAPH: %s\n", filename);
-        // printOBJ(res, 0);        
-    }
-
-    { // print material lib
-        // printf("Materials: (%s)\n", filename);
-        // MTL* mtl = res->mtllib;
-        // while (mtl) {
-        //     printf("  %s\n", mtl->name);
-        //     mtl = mtl->next;
-        // }
-    }
-
     return res;
+}
+
+void objApproximateNodeGraph(OBJ* obj) {
+    OBJ* parent = obj;
+    OBJ* current = parent->next;
+
+    while (current) {
+        OBJ* next = current->next;
+
+        if (AABBintersects(parent->boundingbox, current->boundingbox)) {
+            current->next = null;
+            addChild(parent, current);
+            parent->next = null;
+        } else {
+            parent->next = current;
+            parent = current;
+        }
+
+        current = next;
+    }
 }

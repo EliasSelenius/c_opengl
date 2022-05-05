@@ -3,6 +3,7 @@
 #include "../math/matrix.h"
 #include "../prelude.h"
 #include "../math/Transform.h"
+#include "../Application.h"
 
 typedef struct Camera {
     Transform transform;
@@ -23,3 +24,10 @@ void cameraUpdateMatrices(Camera* cam);
 void cameraUse(Camera* cam);
 
 vec3 cameraRay(Camera* cam, vec2 ndc);
+
+inline vec2 screen2ndc(f32 coord_x, f32 coord_y) {
+    f32 x = ((coord_x / (app.width-1)) - 0.5) * 2.0;
+    f32 y = ((coord_y / (app.height-1)) - 0.5) * 2.0;
+
+    return (vec2) { x, -y };
+}
