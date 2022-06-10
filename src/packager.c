@@ -12,28 +12,26 @@
 
 typedef struct Material {
     vec3 albedo;
-    u32 roughness;
-    u32 metallic;
+    f32 roughness;
+    f32 metallic;
 } Material;
 
-typedef struct Model {
-    char name[4]; // TODO: remove this
-    Transform transform;
-    u32 parent_index;
-    
-    u32 vertices_start;
-    u32 vertices_count;
+typedef struct TriangleGroup {
+    u32 material_index;
     u32 indices_start;
     u32 indices_count;
+} TriangleGroup;
+
+typedef struct Model {
+    Transform transform;
+    u32 parent_index;
+
+    u32 vertices_start;
+    u32 vertices_count;
+
+    TriangleGroup tris;
 
 } Model;
-
-// typedef struct VertexGroup {
-//     u32 vertices_start;
-//     u32 vertices_count;
-//     u32 indices_start;
-//     u32 indices_count;
-// } VertexGroup;
 
 typedef struct Package {
     Model* models;
@@ -65,6 +63,7 @@ void packageCreate() {
     OBJ* obj = objLoad("src/models/Ships.obj");
     
     u32 modelsCount = 1;
+    u32 materialsCount = 0;
     u32 verticesCount = 0;
     u32 indicesCount = 0;
 
@@ -85,7 +84,6 @@ void packageCreate() {
             u32 iLen = listLength(next->faces) * 3;
 
             *model = (Model) {
-                .name = "MODL",
 
                 .transform.position = obj->position,
                 .transform.rotation = (quat) {0, 0, 0, 1},
@@ -94,8 +92,9 @@ void packageCreate() {
 
                 .vertices_start = verticesCount,
                 .vertices_count = vLen,
-                .indices_start = indicesCount,
-                .indices_count = iLen
+                .tris.material_index = 0,
+                .tris.indices_start = indicesCount,
+                .tris.indices_count = iLen
             };
 
             verticesCount += vLen;
@@ -104,6 +103,34 @@ void packageCreate() {
             next = next->next;
         }
     }
+
+    Material* materials;
+
+    { // materials
+
+        // count materials
+        MTL* mtl = obj->mtllib;
+        while (mtl) {
+            materialsCount++;
+            mtl = mtl->next;
+        }
+
+        materials = malloc(sizeof(Material) * materialsCount);
+
+        // fill materials buffer
+        u32 mIndex = 0;
+        mtl = obj->mtllib;
+        while (mtl) {
+            materials[mIndex++] = (Material) {
+                .albedo = mtl->Kd,
+                .roughness = 0.1f,
+                .metallic = 0.1f
+            };
+            
+            mtl = mtl->next;
+        }
+    }
+
 
     vertex* vertices = malloc(sizeof(vertex) * verticesCount);
     u32* indices = malloc(sizeof(u32) * indicesCount);
@@ -154,6 +181,7 @@ void packageCreate() {
         }
     }
 
+
     objFree(obj);
 
     { // write to file
@@ -166,6 +194,8 @@ void packageCreate() {
         // models
         fwrite(&modelsCount, sizeof(modelsCount), 1, file);
         fwrite(models, sizeof(Model), modelsCount, file);
+
+
 
         // vertices
         fwrite(&verticesCount, sizeof(u32), 1, file);
@@ -180,6 +210,7 @@ void packageCreate() {
 
 
     free(models);
+    free(materials);
     free(vertices);
     free(indices);
 

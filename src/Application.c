@@ -915,8 +915,11 @@ typedef struct Package {
     Model* models;
     u32 modelsCount;
 
-    u32 verticesCount;
+    void* materials;
+    u32 materialsCount;
+
     vertex* vertices;
+    u32 verticesCount;
 
     u32* indices;
     u32 indicesCount;
