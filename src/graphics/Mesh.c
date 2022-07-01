@@ -79,7 +79,7 @@ void meshRender(Mesh* mesh) {
     uboBindBuffer(uboGetByName("Material"), mesh->materialsBuffer);
 
     if (mesh->groups_count) {
-        glMultiDrawElements(GL_TRIANGLES, mesh->groups_count, GL_UNSIGNED_INT, mesh->groups_start, mesh->drawCount);   
+        glMultiDrawElements(GL_TRIANGLES, mesh->groups_count, GL_UNSIGNED_INT, mesh->groups_start, mesh->drawCount);
     } else {
         glDrawElements(GL_TRIANGLES, mesh->drawCount, GL_UNSIGNED_INT, 0);
     }

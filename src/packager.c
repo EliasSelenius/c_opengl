@@ -4,48 +4,14 @@
 #include "graphics/obj.h"
 #include "List.h"
 #include "Application.h"
+#include "GL.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "packager.h"
+
 #define PACKAGE_NAME "package.bin"
-
-typedef struct Material {
-    vec3 albedo;
-    f32 roughness;
-    f32 metallic;
-} Material;
-
-typedef struct TriangleGroup {
-    u32 material_index;
-    u32 indices_start;
-    u32 indices_count;
-} TriangleGroup;
-
-typedef struct Model {
-    Transform transform;
-    u32 parent_index;
-
-    u32 vertices_start;
-    u32 vertices_count;
-
-    TriangleGroup tris;
-
-} Model;
-
-typedef struct Package {
-    Model* models;
-    u32 modelsCount;
-
-    Material* materials;
-    u32 materialsCount;
-
-    vertex* vertices;
-    u32 verticesCount;
-
-    u32* indices;
-    u32 indicesCount;
-} Package;
 
 
 /*
@@ -56,7 +22,7 @@ typedef struct Package {
         - list of indices
 */
 
-
+Package package;
 
 void packageCreate() {
 
@@ -195,7 +161,9 @@ void packageCreate() {
         fwrite(&modelsCount, sizeof(modelsCount), 1, file);
         fwrite(models, sizeof(Model), modelsCount, file);
 
-
+        // materials
+        fwrite(&materialsCount, sizeof(materialsCount), 1, file);
+        fwrite(materials, sizeof(Material), materialsCount, file);
 
         // vertices
         fwrite(&verticesCount, sizeof(u32), 1, file);
@@ -216,11 +184,11 @@ void packageCreate() {
 
 }
 
-Package packageLoad() {
+void packageLoad() {
     FILE* file;
     if (fopen_s(&file, PACKAGE_NAME, "rb")) {
         printf("Failed to open \"%s\".\n", PACKAGE_NAME);
-        return (Package) {0};
+        return;
     }
 
     // models
@@ -228,6 +196,12 @@ Package packageLoad() {
     fread(&modelsCount, sizeof(modelsCount), 1, file);
     Model* models = malloc(sizeof(Model) * modelsCount);
     fread(models, sizeof(Model), modelsCount, file);
+
+    // materials
+    u32 materialsCount = 0;
+    fread(&materialsCount, sizeof(materialsCount), 1, file);
+    Material* materials = malloc(sizeof(Material) * materialsCount);
+    fread(materials, sizeof(Material), materialsCount, file);
 
     // vertices
     u32 verticesCount = 0;
@@ -241,9 +215,12 @@ Package packageLoad() {
     u32* indices = malloc(sizeof(u32) * indicesCount);
     fread(indices, sizeof(u32), indicesCount, file);
 
-    return (Package) {
+    package = (Package) {
         .modelsCount = modelsCount,
         .models = models,
+
+        .materialsCount = materialsCount,
+        .materials = materials,
 
         .verticesCount = verticesCount,
         .vertices = vertices,
@@ -252,4 +229,23 @@ Package packageLoad() {
         .indices = indices
     };
 
+    glGenVertexArrays(1, &package.vao);
+    glBindVertexArray(package.vao);
+
+    glGenBuffers(1, &package.vbo);
+    glGenBuffers(1, &package.ebo);
+
+    glBindBuffer(GL_ARRAY_BUFFER, package.vbo);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertex) * package.verticesCount, package.vertices, GL_STATIC_DRAW);
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, package.ebo);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(u32) * package.indicesCount, package.indices, GL_STATIC_DRAW);
+
+    vertex* vert = null;
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, false, sizeof(vertex), &vert->pos);
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 3, GL_FLOAT, false, sizeof(vertex), &vert->normal);
+
+    glBindVertexArray(0);
 }

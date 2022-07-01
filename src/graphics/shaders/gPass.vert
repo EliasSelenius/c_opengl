@@ -6,8 +6,10 @@ layout (std140) uniform Model {
     mat4 model;
 };
 
+
 struct Mat {
     vec4 albedo;
+    // vec2 metallic_roughness;
     // float metallic;
     // float roughness;
 };
@@ -15,6 +17,7 @@ struct Mat {
 layout (std140) uniform Material {
     Mat materials[3];
 };
+
 
 layout (location = 0) in vec3 a_Pos;
 layout (location = 1) in vec3 a_Normal;
@@ -36,6 +39,7 @@ void main() {
     v.normal = normalize(mat3(view_model) * a_Normal);
 
     // v.color = vec4(float(gl_DrawID) / 3.0);
+
     v.color = materials[gl_DrawID].albedo;
 
     gl_Position = camera.projection * pos;

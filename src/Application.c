@@ -4,6 +4,7 @@
 #include "fileIO.h"
 #include "String.h"
 #include "List.h"
+#include "packager.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -486,6 +487,8 @@ static void initUBO(Ublock** ubo, char* name, u32 size) {
 }
 
 static void opengl_debug_callback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* message, const void* userParam) {
+    // printf("OpenGL complains\n");
+    
     if (type == GL_DEBUG_TYPE_ERROR) {
         printf("opengl error:\n\t %s\n\n", message);
     }
@@ -573,8 +576,8 @@ int appInit() {
     glfwSetKeyCallback(app.window, key_callback);
     glfwSetScrollCallback(app.window, scroll_callback);
 
-    // TODO: GL_DEBUG_OUTPUT_SYNCHRONOUS
     glEnable(GL_DEBUG_OUTPUT);
+    glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
     glDebugMessageCallback(&opengl_debug_callback, NULL);
 
     { // geometry pass stuff
@@ -785,10 +788,7 @@ static void drawframe() {
             }
         }
 
-        mat4 matrix;
-        mat4SetIdentity(&matrix);
-        bufferInit(app.modelUBO->bufferId, &matrix, sizeof(mat4));
-        meshRender(&g_Test_mesh);
+        packageDraw();
 
         { // test reading from gbuffer
             vec3 vpos;
@@ -899,43 +899,6 @@ static void updateInput() {
     }
 }
 
-typedef struct Model {
-    char name[4]; // TODO: remove this
-    Transform transform;
-    u32 parent_index;
-    
-    u32 vertices_start;
-    u32 vertices_count;
-    u32 indices_start;
-    u32 indices_count;
-
-} Model;
-
-typedef struct Package {
-    Model* models;
-    u32 modelsCount;
-
-    void* materials;
-    u32 materialsCount;
-
-    vertex* vertices;
-    u32 verticesCount;
-
-    u32* indices;
-    u32 indicesCount;
-} Package;
-
-void packageCreate();
-Package packageLoad();
-
-void genMeshFromModel(Package* package, Model* model, Mesh* mesh) {
-    meshCreate(
-        model->vertices_count,
-        package->vertices,
-        model->indices_count,
-        package->indices, mesh);    
-}
-
 
 int main(int argc, char* argv[]) {
 
@@ -947,12 +910,12 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    Package package = packageLoad();
-
 
     if (!appInit()) return -1;
 
-    genMeshFromModel(&package, &package.models[0], &g_Test_mesh);
+    packageLoad();
+    
+    genMeshFromModel(&package.models[0], &g_Test_mesh);
     
 
     { // Island
